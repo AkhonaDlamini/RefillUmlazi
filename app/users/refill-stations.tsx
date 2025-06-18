@@ -1,18 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { getDatabase, onValue, ref } from 'firebase/database';
 import React, { useEffect, useRef, useState } from 'react';
-import {
-  Dimensions,
-  FlatList,
-  Linking,
-  Modal,
-  Platform,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { FlatList,Linking, Modal,Platform,StyleSheet,Text,TextInput,TouchableOpacity,View } from 'react-native';
 import MapView, { Callout, Marker } from 'react-native-maps';
 
 type RefillStation = {

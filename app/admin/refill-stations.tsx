@@ -1,22 +1,9 @@
-// RefillStations.tsx
-
 import { Ionicons } from '@expo/vector-icons';
 import { Picker } from '@react-native-picker/picker';
 import * as Location from 'expo-location';
 import { onValue, push, ref, remove, update } from 'firebase/database';
 import React, { useEffect, useRef, useState } from 'react';
-import {
-  Alert,
-  FlatList,
-  KeyboardAvoidingView,
-  Platform,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-  useWindowDimensions,
-} from 'react-native';
+import { Alert,FlatList,KeyboardAvoidingView,Platform,StyleSheet,Text,TextInput,TouchableOpacity,View,useWindowDimensions } from 'react-native';
 import MapView, { MapPressEvent, Marker } from 'react-native-maps';
 import { db } from '../../config/firebaseConfig';
 
