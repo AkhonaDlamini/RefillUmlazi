@@ -1,99 +1,168 @@
-import Ionicons from '@expo/vector-icons/Ionicons';
 import { onValue, push, ref, remove, update } from 'firebase/database';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, FlatList, I18nManager, KeyboardAvoidingView, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { db } from '../../config/firebaseConfig';
-I18nManager.forceRTL(false); // Force LTR
+import {
+  ActivityIndicator, BackHandler, FlatList, KeyboardAvoidingView, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, useWindowDimensions, View, Alert
+} from 'react-native';
+import Ionicons from 'react-native-vector-icons/Ionicons';
+import { auth, db } from '../../config/firebaseConfig';
+
+type Chat = {
+  id: string;
+  userId: string;
+  displayName?: string;
+  message: string;
+  timestamp: string;
+  reactions?: { [userId: string]: string };
+  replies?: { [key: string]: Reply };
+};
+
+type Reply = {
+  userId: string;
+  displayName?: string;
+  message: string;
+  timestamp: string;
+  reactions?: { [userId: string]: string };
+  replies?: { [key: string]: Reply };
+};
 
 const reactionIcons = [
-  { name: 'thumbs-up', color: '#4CAF50' },
-  { name: 'heart', color: '#e91e63' },
-  { name: 'checkmark-circle', color: '#2196F3' },
-  { name: 'happy', color: '#FFC107' },
-  { name: 'sad', color: '#9C27B0' },
+  { name: 'thumbs-up', color: '#1E90FF' },
+  { name: 'heart', color: '#FF4444' },
+  { name: 'happy-outline', color: '#FFD700' },
+  { name: 'star', color: '#FFD700' },
+  { name: 'sad-outline', color: '#6699CC' },
+  { name: 'skull-outline', color: '#FF6347' },
 ];
 
-const getDisplayName = (userId: string | undefined | null) => {
-  if (!userId) return 'anonymous';
-  return userId.includes('@') ? userId.split('@')[0] : userId;
-};
-
-const formatTime = (timestamp: string) => {
-  return new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-};
-
-export default function AdminChats() {
-  const [chats, setChats] = useState<any[]>([]);
-  const [threadModalChatId, setThreadModalChatId] = useState<string | null>(null);
+export default function UserChat() {
+  const [chats, setChats] = useState<Chat[]>([]);
+  const [message, setMessage] = useState('');
   const [replyText, setReplyText] = useState('');
   const [replyingToReplyId, setReplyingToReplyId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [threadModalChatId, setThreadModalChatId] = useState<string | null>(null);
   const [reactionModalVisible, setReactionModalVisible] = useState<
-    | { type: 'chat'; id: string }
-    | { type: 'reply'; id: string; path: string[] }
+    | { type: 'chat'; id: string; chatId: string }
+    | { type: 'reply'; id: string; chatId: string; path: string[] }
     | null
   >(null);
+  const [users, setUsers] = useState<{ [uid: string]: { displayName?: string; email?: string } }>({});
+  const [isUsersLoading, setIsUsersLoading] = useState(true);
+  const { width } = useWindowDimensions();
 
   useEffect(() => {
-    const chatsRef = ref(db, 'chats');
-    return onValue(chatsRef, (snapshot) => {
-      const data = snapshot.val();
-      if (data) {
-        const parsed = Object.entries(data).map(([id, value]) => ({
-          id,
-          ...(value as any),
-        }));
+    if (!threadModalChatId) return;
+    const onBackPress = () => {
+      setThreadModalChatId(null);
+      setReplyingToReplyId(null);
+      return true;
+    };
+    const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+    return () => subscription.remove();
+  }, [threadModalChatId]);
+
+  useEffect(() => {
+    const chatRef = ref(db, 'chats');
+    const unsubscribe = onValue(chatRef, (snapshot) => {
+      try {
+        const data = snapshot.val() || {};
+        const parsed = Object.entries(data).map(([id, value]) => ({ id, ...(value as Omit<Chat, 'id'>) }));
         setChats(parsed.reverse());
-      } else {
-        setChats([]);
+
+        const userIds = [...new Set(parsed.flatMap(c => [
+          c.userId,
+          ...(c.replies ? Object.values(c.replies).flatMap(r => [r.userId, ...(r.replies ? Object.values(r.replies).flatMap(nr => nr.userId) : [])]) : [])
+        ]))];
+        if (userIds.length > 0) {
+          const usersRef = ref(db, 'users');
+          onValue(usersRef, (userSnapshot) => {
+            try {
+              const allUsers = userSnapshot.val() || {};
+              const filteredUsers = userIds.reduce((acc, uid) => {
+                if (allUsers[uid]) acc[uid] = allUsers[uid];
+                return acc;
+              }, {} as { [uid: string]: { displayName?: string; email?: string } });
+              setUsers(filteredUsers);
+              setIsUsersLoading(false);
+            } catch (e) {
+              console.error('Error fetching users:', e);
+              setIsUsersLoading(false);
+            }
+          }, (error) => {
+            console.error('Firebase users error:', error);
+            setIsUsersLoading(false);
+          });
+        } else {
+          setUsers({});
+          setIsUsersLoading(false);
+        }
+      } catch (e) {
+        console.error('Error fetching chats:', e);
       }
+    }, (error) => {
+      console.error('Firebase chats error:', error);
     });
+    return () => unsubscribe();
   }, []);
 
-  // --- Reply logic similar to user side ---
-  const sendReply = async (chatId: string) => {
-    if (!replyText.trim()) return;
-    setLoading(true);
-
-    const replyPath = replyingToReplyId
-      ? `chats/${chatId}/replies/${replyingToReplyId}/replies`
-      : `chats/${chatId}/replies`;
-
+  const sendMessage = async () => {
+    if (!message.trim() || !auth.currentUser) return;
     try {
-      await push(ref(db, replyPath), {
-        userId: 'admin',
-        message: replyText,
+      await push(ref(db, 'chats'), {
+        userId: auth.currentUser.uid,
+        displayName: auth.currentUser.displayName?.trim() || 'anonymous',
+        message: message.trim(),
         timestamp: new Date().toISOString(),
       });
-      setReplyText('');
-      setReplyingToReplyId(null);
-    } catch {
-      Alert.alert('Error', 'Failed to send reply.');
-    } finally {
-      setLoading(false);
+      setMessage('');
+    } catch (e) {
+      console.error('Error sending message:', e);
     }
   };
 
-  // --- Reaction logic ---
+  const sendReply = React.useCallback(
+    async (chatId: string) => {
+      if (!replyText.trim() || !auth.currentUser) return;
+      setLoading(true);
+      try {
+        const path = replyingToReplyId
+          ? `chats/${chatId}/replies/${replyingToReplyId}/replies`
+          : `chats/${chatId}/replies`;
+        await push(ref(db, path), {
+          userId: auth.currentUser.uid,
+          displayName: auth.currentUser.displayName?.trim() || 'anonymous',
+          message: replyText.trim(),
+          timestamp: new Date().toISOString(),
+        });
+        setReplyText('');
+        setReplyingToReplyId(null);
+      } catch (e) {
+        console.error('Error sending reply:', e);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [replyText, replyingToReplyId]
+  );
+
   const reactToMessage = async (
     chatId: string,
     reaction: string,
     type: 'chat' | 'reply',
     replyPathArr?: string[]
   ) => {
-    const userId = 'admin';
+    const userId = getSafeUserId(auth.currentUser?.uid || 'anonymous');
     try {
       if (type === 'chat') {
-        const chat = chats.find((c) => c.id === chatId);
-        const currentReaction = chat?.reactions?.[userId];
-        const reactionRef = ref(db, `chats/${chatId}/reactions`);
-        if (currentReaction === reaction) {
-          await update(reactionRef, { [userId]: null });
+        const chat = chats.find(c => c.id === chatId);
+        const current = chat?.reactions?.[userId];
+        const pathRef = ref(db, `chats/${chatId}/reactions/${userId}`);
+        if (current === reaction) {
+          await remove(pathRef);
         } else {
-          await update(reactionRef, { [userId]: reaction });
+          await update(ref(db, `chats/${chatId}/reactions`), { [userId]: reaction });
         }
       } else if (type === 'reply' && replyPathArr) {
-        // Build the path to the nested reply's reactions
         let pathArr = ['chats', chatId, 'replies'];
         for (let i = 0; i < replyPathArr.length; i++) {
           pathArr.push(replyPathArr[i]);
@@ -103,24 +172,22 @@ export default function AdminChats() {
         }
         pathArr.push('reactions');
         const reactionRef = ref(db, pathArr.join('/'));
-        // Find the reply object for current reaction (optional, for UI)
         let reply = chats.find((c) => c.id === chatId)?.replies?.[replyPathArr[0]];
         for (let i = 1; i < replyPathArr.length; i++) {
           reply = reply?.replies?.[replyPathArr[i]];
         }
-        const currentReaction = reply?.reactions?.[userId];
-        if (currentReaction === reaction) {
+        const current = reply?.reactions?.[userId];
+        if (current === reaction) {
           await update(reactionRef, { [userId]: null });
         } else {
           await update(reactionRef, { [userId]: reaction });
         }
       }
-    } catch {
-      Alert.alert('Error', 'Failed to update reaction.');
+    } catch (error) {
+      console.error('Error updating reaction:', error);
     }
   };
 
-  // --- Cross-platform delete chat ---
   const handleDeleteChat = (chatId: string) => {
     if (typeof window !== "undefined" && window.confirm) {
       const confirmed = window.confirm("Are you sure you want to delete this chat?");
@@ -152,7 +219,7 @@ export default function AdminChats() {
     }
   };
 
-  // --- Cross-platform delete reply ---
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const handleDeleteReply = (chatId: string, replyPathArr: string[]) => {
     Alert.alert(
       "Delete Reply",
@@ -168,8 +235,7 @@ export default function AdminChats() {
     );
   };
 
-  const deleteReply = async (chatId: string, replyPathArr: string[]) => {
-    // Build the path: chats/{chatId}/replies/{replyId}/replies/{nestedReplyId}/replies/{deepNestedReplyId}...
+  async function deleteReply(chatId: string, replyPathArr: string[]) {
     let pathArr = ['chats', chatId, 'replies'];
     for (let i = 0; i < replyPathArr.length; i++) {
       pathArr.push(replyPathArr[i]);
@@ -185,103 +251,137 @@ export default function AdminChats() {
       Alert.alert("Error", "Failed to delete reply.");
       console.error("Error deleting reply:", error);
     }
-  };
+  }
 
-  const getUserReaction = (reactions?: { [key: string]: string }) => {
-    const userId = 'admin';
+  const getUserReaction = React.useCallback((reactions?: { [key: string]: string }) => {
+    const userId = getSafeUserId(auth.currentUser?.uid || 'anonymous');
     return reactions?.[userId] || null;
-  };
+  }, []);
 
-  const getReactionCount = (reactions?: { [key: string]: string }) =>
-    reactions ? Object.values(reactions).filter(Boolean).length : 0;
+  const getReactionCount = React.useCallback(
+    (reactions?: { [key: string]: string }) =>
+      reactions ? Object.values(reactions).filter(Boolean).length : 0,
+    []
+  );
 
-  // --- Render reply (threaded) ---
-  const renderReply = (
-    replyId: string,
-    reply: any,
-    chatId: string,
-    level: number = 0,
-    parentPath: string[] = []
-  ) => {
-    const userReaction = getUserReaction(reply.reactions);
+  const getDisplayName = React.useCallback(
+    (userId?: string | null, displayName?: string) => {
+      if (displayName?.trim()) return displayName.trim();
+      if (!userId) return 'anonymous';
+      if (users[userId]?.displayName?.trim()) return users[userId].displayName.trim();
+      return userId;
+    },
+    [users]
+  );
 
-    const replyStyle =
-      level === 0
-        ? styles.replyCard
-        : [styles.nestedReply, { marginLeft: level * 18 }];
+  const renderReply = React.useCallback(
+    (
+      replyId: string,
+      reply: Reply & { replies?: { [key: string]: Reply } },
+      chatId: string,
+      level: number = 0,
+      parentPath: string[] = []
+    ) => {
+      const userReaction = getUserReaction(reply.reactions);
+      const reactionIcon = reactionIcons.find(r => r.name === userReaction) || reactionIcons[0];
+
+      function formatTime(timestamp: string): React.ReactNode {
+        if (!timestamp) return '';
+        const date = new Date(timestamp);
+        const now = new Date();
+        const diff = (now.getTime() - date.getTime()) / 1000;
+
+        if (diff < 60) return 'Just now';
+        if (diff < 3600) return `${Math.floor(diff / 60)} min ago`;
+        if (diff < 86400) return `${Math.floor(diff / 3600)} hr ago`;
+
+        const options: Intl.DateTimeFormatOptions = { hour: '2-digit', minute: '2-digit', hour12: true };
+        return date.toLocaleTimeString(undefined, options);
+      }
+
+      return (
+        <View
+          key={replyId}
+          style={[
+            styles.replyCard,
+            { marginLeft: level * 20 }
+          ]}
+        >
+          <View style={styles.metaRow}>
+            <Text style={styles.replyUser}>
+              {isUsersLoading ? 'Loading...' : getDisplayName(reply.userId, reply.displayName)}
+            </Text>
+            <Text style={styles.replyTime}>{formatTime(reply.timestamp)}</Text>
+          </View>
+          <Text style={styles.replyMessage}>{reply.message}</Text>
+          <View style={styles.replyActionRow}>
+            <TouchableOpacity
+              style={[styles.reactionButton, userReaction && { backgroundColor: '#DCF8C6' }]}
+              onPress={() =>
+                setReactionModalVisible({
+                  type: 'reply',
+                  id: replyId,
+                  chatId,
+                  path: [...parentPath, replyId],
+                })
+              }
+            >
+              <Ionicons
+                name={userReaction || 'thumbs-up-outline'}
+                size={20}
+                color={userReaction ? reactionIcon.color : '#555'}
+              />
+              <Text style={styles.countText}>{getReactionCount(reply.reactions)}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.replyActionButton}
+              onPress={() => {
+                setReplyingToReplyId(replyId);
+                setReplyText('');
+              }}
+            >
+              <Ionicons name="arrow-undo" size={20} color="#555" />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.reactionButton}
+              onPress={() => handleDeleteReply(chatId, [...parentPath, replyId])}
+            >
+              <Ionicons name="trash-outline" size={18} color="#ff4444" />
+            </TouchableOpacity>
+          </View>
+          {reply.replies &&
+            Object.entries(reply.replies).map(([nestedId, nestedReply]) =>
+              renderReply(nestedId, nestedReply, chatId, level + 1, [...parentPath, replyId])
+            )}
+        </View>
+      );
+    },
+    [getUserReaction, getReactionCount, getDisplayName, setReactionModalVisible, setReplyingToReplyId, setReplyText, isUsersLoading, handleDeleteReply]
+  );
+
+  const threadChat = chats.find(c => c.id === threadModalChatId);
+  const MemoThreadModal = React.useMemo(() => {
+    if (!threadChat) return null;
+    const userReaction = getUserReaction(threadChat.reactions);
+
+    function formatTime(timestamp: string): React.ReactNode {
+      if (!timestamp) return '';
+      const date = new Date(timestamp);
+      const now = new Date();
+      const diff = (now.getTime() - date.getTime()) / 1000;
+
+      if (diff < 60) return 'Just now';
+      if (diff < 3600) return `${Math.floor(diff / 60)} min ago`;
+      if (diff < 86400) return `${Math.floor(diff / 3600)} hr ago`;
+
+      const options: Intl.DateTimeFormatOptions = { hour: '2-digit', minute: '2-digit', hour12: true };
+      return date.toLocaleTimeString(undefined, options);
+    }
 
     return (
-      <View key={replyId} style={replyStyle}>
-        <View style={styles.metaRow}>
-          <Text style={styles.replyUser}>{getDisplayName(reply.userId)}</Text>
-          <Text style={styles.replyTime}>{formatTime(reply.timestamp)}</Text>
-        </View>
-        <Text style={styles.replyMessage}>{reply.message}</Text>
-        <View style={styles.replyActionRow}>
-          <TouchableOpacity
-            style={[styles.reactionButton, userReaction && { backgroundColor: '#DCF8C6' }]}
-            onPress={() =>
-              reactToMessage(chatId, getReactionIconName(userReaction), 'reply', [...parentPath, replyId])
-            }
-            onLongPress={() =>
-              setReactionModalVisible({ type: 'reply', id: replyId, path: [...parentPath, replyId] })
-            }
-          >
-            <Ionicons
-              name={getReactionIconName(userReaction)}
-              size={20}
-              color={userReaction
-                ? (reactionIcons.find(r => r.name === userReaction)?.color || '#4CAF50')
-                : '#555'}
-            />
-            <Text style={styles.countText}>{getReactionCount(reply.reactions)}</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.reactionButton}
-            onPress={() => {
-              setReplyingToReplyId(replyId);
-              setReplyText('');
-            }}
-          >
-            <Ionicons name="arrow-undo" size={20} color="#555" />
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.reactionButton}
-            onPress={() => handleDeleteReply(chatId, [...parentPath, replyId])}
-          >
-            <Ionicons name="trash-outline" size={18} color="#ff4444" />
-          </TouchableOpacity>
-        </View>
-        {/* Render nested replies recursively */}
-        {reply.replies &&
-          Object.entries(reply.replies).map(([nestedId, nestedReply]) =>
-            renderReply(nestedId, nestedReply, chatId, level + 1, [...parentPath, replyId])
-          )}
-      </View>
-    );
-  };
-
-  // --- Thread Modal ---
-
-  const threadModalChat = chats.find((c) => c.id === threadModalChatId);
-
-  const MemoizedThreadModalContent = React.useMemo(() => {
-    if (!threadModalChat) return null;
-    const userReaction = getUserReaction(threadModalChat.reactions);
-
-    return (
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        style={styles.threadModalContainer}
-      >
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={[styles.threadModalContainer, { width }]}>
         <View style={styles.threadHeader}>
-          <TouchableOpacity
-            onPress={() => {
-              setThreadModalChatId(null);
-              setReplyingToReplyId(null);
-            }}
-            style={styles.backButton}
-          >
+          <TouchableOpacity onPress={() => { setThreadModalChatId(null); setReplyingToReplyId(null); }} style={styles.backButton}>
             <Ionicons name="arrow-back" size={24} color="#1E90FF" />
           </TouchableOpacity>
           <Text style={styles.threadHeaderText}>Thread</Text>
@@ -292,33 +392,32 @@ export default function AdminChats() {
           <ScrollView style={{ flex: 1 }}>
             <View style={styles.reportCard}>
               <View style={styles.metaRow}>
-                <Text style={styles.metaText}>{getDisplayName(threadModalChat.userId)}</Text>
-                <Text style={styles.metaText}>{formatTime(threadModalChat.timestamp)}</Text>
+                <Text style={styles.metaText}>
+                  {isUsersLoading ? 'Loading...' : getDisplayName(threadChat.userId, threadChat.displayName)}
+                </Text>
+                <Text style={styles.metaText}>{formatTime(threadChat.timestamp)}</Text>
               </View>
-              <Text style={styles.reportMessage}>{threadModalChat.message}</Text>
+              <Text style={styles.reportMessage}>{threadChat.message}</Text>
               <View style={styles.actionRow}>
                 <TouchableOpacity
                   style={[styles.reactionButton, userReaction && { backgroundColor: '#DCF8C6' }]}
-                  onPress={() => setReactionModalVisible({ type: 'chat', id: threadModalChat.id })}
+                  onPress={() => setReactionModalVisible({ type: 'chat', id: threadChat.id, chatId: threadChat.id })}
                 >
-                  <Ionicons name={(userReaction || 'thumbs-up') as React.ComponentProps<typeof Ionicons>['name']} size={20} color={userReaction ? '#4CAF50' : '#555'} />
-                  <Text style={styles.countText}>{getReactionCount(threadModalChat.reactions)}</Text>
+                  <Ionicons name={userReaction || 'thumbs-up'} size={20} color={userReaction ? '#4CAF50' : '#555'} />
+                  <Text style={styles.countText}>{getReactionCount(threadChat.reactions)}</Text>
                 </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.replyCountButton}
-                  onPress={() => {}}
-                >
+                <TouchableOpacity style={styles.replyCountButton} onPress={() => {}}>
                   <Ionicons name="chatbubble-outline" size={20} color="#555" />
-                  <Text style={styles.countText}>{threadModalChat.replies ? Object.keys(threadModalChat.replies).length : 0}</Text>
+                  <Text style={styles.countText}>{threadChat.replies ? Object.keys(threadChat.replies).length : 0}</Text>
                 </TouchableOpacity>
               </View>
             </View>
 
             <View style={{ marginTop: 10 }}>
               <Text style={{ fontWeight: '600', marginBottom: 6 }}>Replies</Text>
-              {threadModalChat.replies
-                ? Object.entries(threadModalChat.replies).map(([replyId, reply]) =>
-                    renderReply(replyId, reply, threadModalChat.id, 0, [])
+              {threadChat.replies
+                ? Object.entries(threadChat.replies).map(([rid, r]) =>
+                    renderReply(rid, r, threadChat.id, 0)
                   )
                 : <Text style={{ color: '#999', fontStyle: 'italic' }}>No replies yet.</Text>}
             </View>
@@ -341,33 +440,30 @@ export default function AdminChats() {
               value={replyText}
               onChangeText={setReplyText}
             />
-            {loading ? (
-              <ActivityIndicator size="small" color="#1E90FF" style={{ marginLeft: 10 }} />
-            ) : (
-              <TouchableOpacity
-                onPress={() => sendReply(threadModalChat.id)}
-                style={styles.replySendButton}
-              >
-                <Text style={styles.replySendButtonText}>Send</Text>
-              </TouchableOpacity>
-            )}
+            {loading
+              ? <ActivityIndicator size="small" color="#1E90FF" style={{ marginLeft: 10 }} />
+              : <TouchableOpacity onPress={() => sendReply(threadChat.id)} style={styles.replySendButton}>
+                  <Text style={styles.replySendButtonText}>Send</Text>
+                </TouchableOpacity>
+            }
           </View>
         </View>
       </KeyboardAvoidingView>
     );
-  // eslint-disable-next-line
-  }, [threadModalChat, replyText, replyingToReplyId, loading]);
+  }, [threadChat, replyText, replyingToReplyId, loading, width, renderReply, sendReply, getReactionCount, getUserReaction, getDisplayName, isUsersLoading]);
 
-  // --- Reaction Modal ---
   const ReactionModal = () => {
-    if (!reactionModalVisible || !threadModalChatId) return null;
-    const { type } = reactionModalVisible;
-    const chatId = threadModalChatId;
-    const path = type === 'reply' ? (reactionModalVisible as { type: 'reply'; id: string; path: string[] }).path : undefined;
+    if (!reactionModalVisible) return null;
+    const { type, chatId } = reactionModalVisible;
+    const chat = chats.find(c => c.id === chatId);
 
     let currentReaction = null;
     let reply = null;
-    const chat = chats.find((c) => c.id === chatId);
+    let path: string[] | undefined = undefined;
+
+    if (type === 'reply') {
+      path = (reactionModalVisible as { type: 'reply'; id: string; chatId: string; path: string[] }).path;
+    }
 
     if (type === 'chat') {
       currentReaction = getUserReaction(chat?.reactions);
@@ -380,17 +476,8 @@ export default function AdminChats() {
     }
 
     return (
-      <Modal
-        transparent
-        animationType="fade"
-        visible={!!reactionModalVisible}
-        onRequestClose={() => setReactionModalVisible(null)}
-      >
-        <TouchableOpacity
-          style={styles.reactionModalOverlay}
-          activeOpacity={1}
-          onPress={() => setReactionModalVisible(null)}
-        >
+      <Modal transparent animationType="fade" visible={!!reactionModalVisible} onRequestClose={() => setReactionModalVisible(null)}>
+        <TouchableOpacity style={styles.reactionModalOverlay} activeOpacity={1} onPress={() => setReactionModalVisible(null)}>
           <View style={styles.reactionModalContent}>
             <Text style={styles.reactionModalTitle}>Choose a reaction</Text>
             <View style={styles.reactionsRow}>
@@ -403,7 +490,7 @@ export default function AdminChats() {
                   }}
                   style={[styles.reactionIconButton, currentReaction === name && { backgroundColor: color + '33' }]}
                 >
-                  <Ionicons name={name as React.ComponentProps<typeof Ionicons>['name']} size={32} color={color} />
+                  <Ionicons name={name} size={32} color={color} />
                 </TouchableOpacity>
               ))}
             </View>
@@ -413,108 +500,102 @@ export default function AdminChats() {
     );
   };
 
-  function getReactionIconName(reaction: string | null | undefined) {
-    // Map filled icon names to their outline fallback
-    switch (reaction) {
-      case 'thumbs-up':
-        return 'thumbs-up';
-      case 'heart':
-        return 'heart';
-      case 'checkmark-circle':
-        return 'checkmark-circle';
-      case 'happy':
-        return 'happy';
-      case 'sad':
-        return 'sad';
-      default:
-        return 'thumbs-up-outline';
-    }
-  }
-
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.appName}>Community Forum</Text>
-      </View>
+      <Text style={styles.header}>Community Forum</Text>
+      {isUsersLoading ? (
+        <ActivityIndicator size="large" color="#1E90FF" style={{ marginTop: 20 }} />
+      ) : (
+        <FlatList
+          data={chats}
+          keyExtractor={item => item.id}
+          inverted
+          contentContainerStyle={{ paddingBottom: 100 }}
+          renderItem={({ item }) => {
+            const userReaction = getUserReaction(item.reactions);
+            const replyCount = item.replies ? Object.keys(item.replies).length : 0;
+            const reactionIcon = reactionIcons.find(r => r.name === userReaction) || reactionIcons[0];
 
-      {/* Spacer for space between header and first card */}
-      <View style={{ height: 16 }} />
+            function formatTime(timestamp: string): React.ReactNode {
+              if (!timestamp) return '';
+              const date = new Date(timestamp);
+              const now = new Date();
+              const diff = (now.getTime() - date.getTime()) / 1000;
 
+              if (diff < 60) return 'Just now';
+              if (diff < 3600) return `${Math.floor(diff / 60)} min ago`;
+              if (diff < 86400) return `${Math.floor(diff / 3600)} hr ago`;
 
-      <FlatList
-        data={chats}
-        keyExtractor={(item) => item.id}
-        renderItem={({ item }) => {
-          const userReaction = getUserReaction(item.reactions);
-          const replyCount = item.replies ? Object.keys(item.replies).length : 0;
+              const options: Intl.DateTimeFormatOptions = { hour: '2-digit', minute: '2-digit', hour12: true };
+              return date.toLocaleTimeString(undefined, options);
+            }
 
-          return (
-            <TouchableOpacity
-              onPress={() => {
-                setThreadModalChatId(item.id);
-                setReplyText('');
-                setReplyingToReplyId(null);
-              }}
-              style={styles.reportCard}
-            >
-              <View style={styles.metaRow}>
-                <Text style={styles.metaText}>{getDisplayName(item.userId)}</Text>
-                <Text style={styles.metaText}>{formatTime(item.timestamp)}</Text>
-              </View>
-              <Text style={styles.reportMessage}>{item.message}</Text>
-              <View style={styles.actionRow}>
-                <TouchableOpacity
-                  style={[styles.reactionButton, userReaction && { backgroundColor: '#DCF8C6' }]}
-                  onPress={() => {
-                    // Toggle thumbs-up
-                    if (userReaction === 'thumbs-up') {
-                      reactToMessage(item.id, 'thumbs-up', 'chat');
-                    } else {
-                      reactToMessage(item.id, 'thumbs-up', 'chat');
-                    }
-                  }}
-                  onLongPress={() => setReactionModalVisible({ type: 'chat', id: item.id })}
-                >
-                  <Ionicons
-                    name={getReactionIconName(userReaction)}
-                    size={20}
-                    color={userReaction
-                      ? (reactionIcons.find(r => r.name === userReaction)?.color || '#4CAF50')
-                      : '#555'}
-                  />
-                  <Text style={styles.countText}>{getReactionCount(item.reactions)}</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.replyCountButton}
-                  onPress={() => {
-                    setThreadModalChatId(item.id);
-                    setReplyText('');
-                  }}
-                >
-                  <Ionicons name="chatbubble-outline" size={20} color="#555" />
-                  <Text style={styles.countText}>{replyCount}</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  onPress={() => handleDeleteChat(item.id)}
-                  style={styles.deleteButton}
-                >
-                  <Ionicons name="trash-outline" size={20} color="#ff4444" />
-                </TouchableOpacity>
-              </View>
-            </TouchableOpacity>
-          );
-        }}
-        ListEmptyComponent={
-          <Text style={styles.emptyState}>No chats available.</Text>
-        }
-      />
+            return (
+              <TouchableOpacity
+                style={styles.reportCard}
+                onPress={() => {
+                  setThreadModalChatId(item.id);
+                  setReplyText('');
+                  setReplyingToReplyId(null);
+                }}
+              >
+                <View style={styles.metaRow}>
+                  <Text style={styles.metaText}>{getDisplayName(item.userId, item.displayName)}</Text>
+                  <Text style={styles.metaText}>{formatTime(item.timestamp)}</Text>
+                </View>
+                <Text style={styles.reportMessage}>{item.message}</Text>
+                <View style={styles.actionRow}>
+                  <TouchableOpacity
+                    style={[styles.reactionButton, userReaction && { backgroundColor: '#DCF8C6' }]}
+                    onPress={() => setReactionModalVisible({ type: 'chat', id: item.id, chatId: item.id })}
+                    onLongPress={() => setReactionModalVisible({ type: 'chat', id: item.id, chatId: item.id })}
+                  >
+                    <Ionicons
+                      name={userReaction || 'thumbs-up-outline'}
+                      size={20}
+                      color={userReaction ? reactionIcon.color : '#555'}
+                    />
+                    <Text style={styles.countText}>{getReactionCount(item.reactions)}</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.replyCountButton}
+                    onPress={() => {
+                      setThreadModalChatId(item.id);
+                      setReplyText('');
+                    }}
+                  >
+                    <Ionicons name="chatbubble-outline" size={20} color="#555" />
+                    <Text style={styles.countText}>{replyCount}</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={() => handleDeleteChat(item.id)}
+                    style={styles.deleteButton}
+                  >
+                    <Ionicons name="trash-outline" size={20} color="#ff4444" />
+                  </TouchableOpacity>
+                </View>
+              </TouchableOpacity>
+            );
+          }}
+          ListEmptyComponent={<View style={{ marginTop: 20 }}><Text style={{ color: '#777', fontStyle: 'italic' }}>No messages yet.</Text></View>}
+        />
+      )}
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.inputContainer}>
+        <TextInput
+          style={styles.input}
+          placeholder="Type your message..."
+          placeholderTextColor="#999"
+          multiline
+          value={message}
+          onChangeText={setMessage}
+        />
+        <TouchableOpacity onPress={sendMessage} style={styles.sendButton}>
+          <Ionicons name="send" size={24} color="#fff" />
+        </TouchableOpacity>
+      </KeyboardAvoidingView>
 
-      <Modal
-        visible={!!threadModalChatId}
-        animationType="slide"
-        onRequestClose={() => setThreadModalChatId(null)}
-      >
-        {MemoizedThreadModalContent}
+      <Modal visible={!!threadModalChatId} animationType="slide" onRequestClose={() => { setThreadModalChatId(null); setReplyingToReplyId(null); }} presentationStyle="pageSheet">
+        {MemoThreadModal}
       </Modal>
 
       <ReactionModal />
@@ -522,308 +603,45 @@ export default function AdminChats() {
   );
 }
 
+function getSafeUserId(userId: string): string {
+  return userId.replace(/[.#$\[\]]/g, '_');
+}
+
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#FFFFFF' },
-  header: {
-    alignItems: 'center',
-    paddingTop: 40,
-    paddingBottom: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: '#1E90FF',
-  },
-  appName: { fontSize: 24, fontWeight: 'bold', color: '#1E90FF' },
-  sectionTitle: { fontSize: 18, fontWeight: 'bold', margin: 10, color: '#1E90FF' },
-  emptyState: { textAlign: 'center', marginTop: 40, fontSize: 16, color: '#888' },
-  reportCard: {
-    backgroundColor: '#F0F0F0',
-    padding: 15,
-    marginHorizontal: 10,
-    marginBottom: 15,
-    borderRadius: 10,
-  },
-  reportAuthor: {
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 2,
-  },
-  reportTimestamp: {
-    fontSize: 12,
-    color: '#666',
-    marginBottom: 8,
-  },
-  cardText: { fontSize: 16, color: '#333', marginBottom: 10 },
-  actionRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  reactionButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#ccc',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 20,
-    marginRight: 15,
-  },
-  reactionSelected: {
-    backgroundColor: '#E0F7FA',
-    borderColor: '#4CAF50',
-  },
-  reactionCount: {
-    marginLeft: 6,
-    fontSize: 14,
-    color: '#555',
-  },
-  replyButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: '#4CAF50',
-    marginRight: 15,
-  },
-  replyCount: {
-    marginLeft: 6,
-    fontSize: 14,
-    color: '#4CAF50',
-  },
-  deleteButton: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: '#ff4444',
-  },
-  repliesContainer: {
-    maxHeight: 150,
-    marginTop: 8,
-    backgroundColor: '#fff',
-    borderRadius: 8 ,
-    paddingVertical: 4,
-    borderWidth: 1,
-    borderColor: '#ddd',
-    },
-    replyContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 6,
-    },
-    reply: {
-    fontSize: 14,
-    color: '#555',
-    flex: 1,
-    },
-    deleteIconSmall: {
-    marginLeft: 10,
-    padding: 4,
-    },
-    modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.3)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    },
-    reactionModal: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 20,
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    width: '90%',
-    },
-    modalReaction: {
-    padding: 10,
-    },
-    selectedReaction: {
-    backgroundColor: '#E0F7FA',
-    borderRadius: 10,
-    },
-    replyModal: {
-    backgroundColor: '#fff',
-    padding: 20,
-    width: '90%',
-    },
-    input: {
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 8,
-    padding: 10,
-    minHeight: 80,
-    textAlignVertical: 'top',
-    marginBottom: 12,
-    color: '#000',
-    },
-    threadModalContainer: {
-      flex: 1,
-      justifyContent: 'center',
-      backgroundColor: 'rgba(0, 0, 0, 0.7)',
-    },
-    threadHeader: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      padding: 15,
-      backgroundColor: '#fff',
-      borderBottomWidth: 1,
-      borderBottomColor: '#ddd',
-    },
-    backButton: {
-      padding: 10,
-    },
-    threadHeaderText: {
-      fontSize: 18,
-      fontWeight: 'bold',
-      color: '#1E90FF',
-    },
-    threadModal: {
-      flex: 1,
-      backgroundColor: '#fff',
-      borderTopLeftRadius: 12,
-      borderTopRightRadius: 12,
-      padding: 15,
-    },
-    replyInputContainer: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      padding: 10,
-      borderTopWidth: 1,
-      borderTopColor: '#ddd',
-      backgroundColor: '#fff',
-    },
-    replyingToIndicator: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      backgroundColor: '#e1f5fe',
-      padding: 8,
-      borderRadius: 20,
-      marginBottom: 10,
-    },
-    replyingToText: {
-      fontSize: 14,
-      color: '#01579b',
-      marginRight: 5,
-    },
-    replyInput: {
-      flex: 1,
-      borderWidth: 1,
-      borderColor: '#ccc',
-      borderRadius: 20,
-      padding: 10,
-      minHeight: 40,
-      maxHeight: 100,
-      marginRight: 10,
-      color: '#000',
-      textAlign: 'left', // Ensure left alignment
-      textAlignVertical: 'top'
-    },
-    replySendButton: {
-      backgroundColor: '#1E90FF',
-      borderRadius: 20,
-      paddingVertical: 10,
-      paddingHorizontal: 15,
-    },
-    replySendButtonText: {
-      color: '#fff',
-      fontWeight: 'bold',
-      fontSize: 16,
-    },
-    reactionModalOverlay: {
-      flex: 1,
-      backgroundColor: 'rgba(0, 0, 0, 0.7)',
-      justifyContent: 'center',
-      alignItems: 'center',
-    },
-    reactionModalContent: {
-      backgroundColor: '#fff',
-      borderRadius: 12,
-      padding: 20,
-      width: '80%',
-    },
-    reactionModalTitle: {
-      fontSize: 18,
-      fontWeight: 'bold',
-      marginBottom: 15,
-      textAlign: 'center',
-    },
-    reactionsRow: {
-      flexDirection: 'row',
-      justifyContent: 'space-around',
-    },
-    reactionIconButton: {
-      padding: 10,
-      borderRadius: 10,
-      alignItems: 'center',
-      justifyContent: 'center',
-      marginHorizontal: 5,
-    },
-    countText: {
-      marginLeft: 6,
-      fontSize: 14,
-      color: '#555',
-    },
-    replyCountButton: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      paddingHorizontal: 8,
-      paddingVertical: 4,
-      borderRadius: 20,
-      borderWidth: 1,
-      borderColor: '#4CAF50',
-      marginRight: 15,
-    },
-    metaRow: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      marginBottom: 8,
-    },
-    metaText: {
-      fontSize: 14,
-      color: '#666',
-    },
-    reportMessage: {
-      fontSize: 16,
-      color: '#333',
-      marginBottom: 10,
-    },
-    replyCard: {
-      backgroundColor: '#f9f9f9',
-      padding: 10,
-      borderRadius: 10,
-      marginBottom: 10,
-      borderWidth: 1,
-      borderColor: '#ddd',
-    },
-    nestedReply: {
-      borderLeftWidth: 2,
-      borderLeftColor: '#1E90FF',
-      paddingLeft: 12,
-      marginBottom: 10,
-      backgroundColor: 'transparent',
-    },
-    replyUser: {
-      fontWeight: 'bold',
-      color: '#333',
-    },
-    replyTime: {
-      fontSize: 12,
-      color: '#666',
-    },
-    replyMessage: {
-      fontSize: 14,
-      color: '#333',
-      marginBottom: 8,
-    },
-    replyActionRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      marginLeft: 10,
-      padding: 4,
-    },
-    });
-
+  header: { fontSize: 24, fontWeight: 'bold', color: '#1E90FF', textAlign: 'center', paddingTop: 40, paddingBottom: 10, borderBottomWidth: 1, borderBottomColor: '#1E90FF' },
+  reportCard: { backgroundColor: '#F0F0F0', padding: 15, marginHorizontal: 10, marginBottom: 15, borderRadius: 10 },
+  metaRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 5 },
+  metaText: { fontSize: 13, color: '#666' },
+  reportMessage: { fontSize: 16, color: '#333', marginBottom: 10 },
+  actionRow: { flexDirection: 'row', alignItems: 'center', marginTop: 8 },
+  reactionButton: { flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', borderWidth: 1, borderColor: '#ccc', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 20, marginRight: 5 },
+  replyCountButton: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: '#ccc', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 20, marginLeft: 5 },
+  deleteButton: { padding: 4, marginLeft: 5 },
+  countText: { marginLeft: 6, fontSize: 14, color: '#555' },
+  inputContainer: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingVertical: 8, borderTopWidth: 1, borderTopColor: '#ccc', backgroundColor: '#fff' },
+  input: { flex: 1, borderWidth: 1, borderColor: '#ccc', borderRadius: 20, paddingHorizontal: 12, paddingVertical: 8, fontSize: 16, color: '#000' },
+  sendButton: { backgroundColor: '#1E90FF', padding: 10, borderRadius: 20, marginLeft: 8 },
+  threadModalContainer: { flex: 1, backgroundColor: '#fff' },
+  threadHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16, borderBottomWidth: 1, borderBottomColor: '#eee', backgroundColor: '#fff' },
+  backButton: { padding: 4 },
+  threadHeaderText: { fontSize: 18, fontWeight: 'bold', color: '#1E90FF' },
+  threadModal: { flex: 1, padding: 16 },
+  replyInputContainer: { flexDirection: 'row', padding: 10, borderTopWidth: 1, borderColor: '#ccc', backgroundColor: '#fff' },
+  replyInput: { flex: 1, borderWidth: 1, borderColor: '#ccc', borderRadius: 20, paddingHorizontal: 12, paddingVertical: 8, fontSize: 16, color: '#000' },
+  replySendButton: { backgroundColor: '#1E90FF', paddingHorizontal: 15, paddingVertical: 10, borderRadius: 20, marginLeft: 8, justifyContent: 'center', alignItems: 'center' },
+  replySendButtonText: { color: '#fff', fontWeight: 'bold' },
+  replyCard: { backgroundColor: '#E6F2FF', borderRadius: 10, padding: 10, marginBottom: 10 },
+  replyUser: { fontWeight: 'bold', color: '#333' },
+  replyTime: { fontSize: 12, color: '#666' },
+  replyMessage: { fontSize: 15, marginVertical: 4, color: '#333' },
+  replyActionRow: { flexDirection: 'row', alignItems: 'center', marginTop: 6 },
+  replyActionButton: { marginLeft: 8, padding: 4 },
+  replyingToIndicator: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#f0f0f0', padding: 8, borderRadius: 8, marginBottom: 8 },
+  replyingToText: { fontSize: 12, color: '#666' },
+  reactionModalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.3)', justifyContent: 'center', alignItems: 'center' },
+  reactionModalContent: { backgroundColor: '#fff', borderRadius: 12, padding: 20, width: '90%' },
+  reactionModalTitle: { fontSize: 16, fontWeight: '600', marginBottom: 12, textAlign: 'center' },
+  reactionsRow: { flexDirection: 'row', justifyContent: 'space-around' },
+  reactionIconButton: { padding: 10, borderRadius: 10 },
+});

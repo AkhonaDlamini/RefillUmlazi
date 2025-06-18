@@ -16,9 +16,7 @@ interface Schedule {
 
 export default function DashboardScreen() {
   const [allSchedules, setAllSchedules] = useState<Schedule[]>([]);
-  const [groupedSchedules, setGroupedSchedules] = useState<
-    Record<string, Schedule[]>
-  >({});
+  const [groupedSchedules, setGroupedSchedules] = useState<Record<string, Schedule[]>>({});
   const [selectedLocation, setSelectedLocation] = useState<string | null>(null);
   const [profileModalVisible, setProfileModalVisible] = useState(false);
   const [editingName, setEditingName] = useState("");
@@ -28,7 +26,6 @@ export default function DashboardScreen() {
   const router = useRouter();
   const uid = auth.currentUser?.uid;
 
-  // Fetch user profile data when modal opens
   useEffect(() => {
     if (!uid) return;
 
@@ -41,7 +38,6 @@ export default function DashboardScreen() {
     return () => unsubscribeSelected();
   }, [uid]);
 
-  // Load all schedules
   useEffect(() => {
     const schedulesRef = ref(db, "admin/schedules");
     const unsubscribeSchedules = onValue(schedulesRef, (snapshot) => {
@@ -60,7 +56,6 @@ export default function DashboardScreen() {
     return () => unsubscribeSchedules();
   }, []);
 
-  // Filter and group schedules by day for selected location
   useEffect(() => {
     if (!selectedLocation) {
       setGroupedSchedules({});
@@ -69,8 +64,7 @@ export default function DashboardScreen() {
 
     const filtered = allSchedules.filter(
       (schedule) =>
-        schedule.location.toLowerCase().trim() ===
-        selectedLocation.toLowerCase().trim()
+        schedule.location.toLowerCase().trim() === selectedLocation.toLowerCase().trim()
     );
 
     const grouped = filtered.reduce((acc, schedule) => {
@@ -85,18 +79,28 @@ export default function DashboardScreen() {
 
   const sortedDays = Object.keys(groupedSchedules).sort((a, b) => {
     const daysOfWeek = [
-      "Sunday",
-      "Monday",
-      "Tuesday",
-      "Wednesday",
-      "Thursday",
-      "Friday",
-      "Saturday",
+      "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday",
     ];
     return daysOfWeek.indexOf(a) - daysOfWeek.indexOf(b);
   });
 
-  // Handle opening profile modal
+  // Function to get the nearest date for a given weekday
+  const getNearestDate = (day: string) => {
+    const daysOfWeek = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+    const today = new Date("2025-06-18"); // Current date: June 18, 2025
+    const dayIndex = daysOfWeek.indexOf(day);
+    const todayIndex = today.getDay();
+    const diff = (dayIndex - todayIndex + 7) % 7;
+    const targetDate = new Date(today);
+    targetDate.setDate(today.getDate() + diff);
+
+    return targetDate.toLocaleDateString("en-ZA", {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    });
+  };
+
   const handleOpenProfileModal = () => {
     if (!auth.currentUser) {
       Alert.alert("Error", "You must be logged in to view your profile.");
@@ -107,7 +111,6 @@ export default function DashboardScreen() {
     setProfileModalVisible(true);
   };
 
-  // Save display name to Firebase Auth and Realtime DB
   const handleSaveName = async () => {
     if (!editingName.trim()) {
       Alert.alert("Name required", "Display name cannot be empty.");
@@ -115,28 +118,26 @@ export default function DashboardScreen() {
     }
     setSaving(true);
     try {
-      if (!auth.currentUser) {
-        throw new Error("No authenticated user.");
-      }
-      await updateProfile(auth.currentUser, { displayName: editingName });
-      await update(ref(db, `users/${uid}`), { displayName: editingName });
+      if (!auth.currentUser) throw new Error("No authenticated user.");
+      await updateProfile(auth.currentUser, { displayName: editingName.trim() });
+      await update(ref(db, `users/${uid}`), { displayName: editingName.trim() });
       Alert.alert("Success", "Display name updated!");
       setProfileModalVisible(false);
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (e) {
-      Alert.alert("Error", "Could not update display name.");
+      console.error("Error updating display name:", e);
+      Alert.alert("Error", "Could not update display name. Please try again.");
+    } finally {
+      setSaving(false);
     }
-    setSaving(false);
   };
 
-  // Logout
   const handleLogout = async () => {
     try {
       await signOut(auth);
       router.replace("/auth/login");
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (e) {
-      Alert.alert("Error", "Could not log out.");
+      console.error("Error logging out:", e);
+      Alert.alert("Error", "Could not log out. Please try again.");
     }
   };
 
@@ -144,15 +145,11 @@ export default function DashboardScreen() {
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.appName}>Refill Umlazi</Text>
-        <TouchableOpacity
-          style={styles.profileIcon}
-          onPress={handleOpenProfileModal}
-        >
+        <TouchableOpacity style={styles.profileIcon} onPress={handleOpenProfileModal}>
           <Ionicons name="person-circle-outline" size={30} color="#1E90FF" />
         </TouchableOpacity>
       </View>
 
-      {/* Profile Modal */}
       <Modal
         visible={profileModalVisible}
         transparent
@@ -181,9 +178,7 @@ export default function DashboardScreen() {
               onPress={handleSaveName}
               disabled={saving}
             >
-              <Text style={styles.buttonText}>
-                {saving ? "Saving..." : "Save Name"}
-              </Text>
+              <Text style={styles.buttonText}>{saving ? "Saving..." : "Save Name"}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.button, styles.logoutButton]}
@@ -213,26 +208,28 @@ export default function DashboardScreen() {
         <FlatList
           data={sortedDays}
           keyExtractor={(day) => day}
-          renderItem={({ item: day }) => (
-            <View style={styles.card}>
-              <Text style={styles.cardTitle}>{day}</Text>
-              {groupedSchedules[day].map((schedule, index) => (
-                <View
-                  key={schedule.id}
-                  style={[
-                    styles.timeSlot,
-                    index === groupedSchedules[day].length - 1 &&
-                      styles.lastTimeSlot,
-                  ]}
-                >
-                  <Text style={styles.scheduleTime}>
-                    {schedule.startTime} - {schedule.endTime}
-                  </Text>
-                  <Text style={styles.scheduleSection}>Section {schedule.location}</Text>
-                </View>
-              ))}
-            </View>
-          )}
+          renderItem={({ item: day }) => {
+            const date = getNearestDate(day);
+            return (
+              <View style={styles.card}>
+                <Text style={styles.cardTitle}>{`${day} - ${date}`}</Text>
+                {groupedSchedules[day].map((schedule, index) => (
+                  <View
+                    key={schedule.id}
+                    style={[
+                      styles.timeSlot,
+                      index === groupedSchedules[day].length - 1 && styles.lastTimeSlot,
+                    ]}
+                  >
+                    <Text style={styles.scheduleTime}>
+                      {schedule.startTime} - {schedule.endTime}
+                    </Text>
+                    <Text style={styles.scheduleSection}>Section {schedule.location}</Text>
+                  </View>
+                ))}
+              </View>
+            );
+          }}
         />
       )}
     </View>
