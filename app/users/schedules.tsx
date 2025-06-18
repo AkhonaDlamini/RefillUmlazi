@@ -94,14 +94,13 @@ export default function DashboardScreen() {
   // Sort dates chronologically (ISO date strings naturally sort well)
   const sortedDates = Object.keys(groupedSchedules).sort((a, b) => a.localeCompare(b));
 
-  // Helper: format date string to "Thursday, 19 June 2025"
+  // Helper: format date string to "Thursday, 19 June"
   const formatDateHeader = (dateString: string) => {
     const dateObj = new Date(dateString);
     const options: Intl.DateTimeFormatOptions = {
       weekday: "long",
       day: "numeric",
       month: "long",
-      year: "numeric",
     };
     return dateObj.toLocaleDateString("en-ZA", options);
   };

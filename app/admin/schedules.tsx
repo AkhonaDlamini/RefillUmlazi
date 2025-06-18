@@ -12,6 +12,7 @@ import {
 } from "react-native";
 import DateTimePickerModal from "react-native-modal-datetime-picker";
 import { db } from "../../config/firebaseConfig";
+import { Picker } from "@react-native-picker/picker";
 
 interface Schedule {
   id: string;
@@ -132,13 +133,43 @@ export default function AdminSchedules() {
         <Text style={styles.title}>Schedule Management</Text>
         <View style={styles.blueLine} />
 
-        {/* Location Picker (TextInput for flexibility) */}
-        <TextInput
-          placeholder="Enter Location (e.g. Umlazi A)"
-          value={selectedLocation}
-          onChangeText={setSelectedLocation}
-          style={styles.input}
-        />
+         {/* Location Picker */}
+        <View style={styles.pickerWrapper}>
+          <Picker
+            selectedValue={selectedLocation}
+            onValueChange={setSelectedLocation}
+            style={styles.picker}
+            dropdownIconColor="#1E90FF"
+          >
+            <Picker.Item label="Select Location" value="" />
+            <Picker.Item label="Umlazi A" value="Umlazi A" />
+            <Picker.Item label="Umlazi B" value="Umlazi B" />
+            <Picker.Item label="Umlazi C" value="Umlazi C" />
+            <Picker.Item label="Umlazi D" value="Umlazi D" />
+            <Picker.Item label="Umlazi E" value="Umlazi E" />
+            <Picker.Item label="Umlazi F" value="Umlazi F" />
+            <Picker.Item label="Umlazi G" value="Umlazi G" />
+            <Picker.Item label="Umlazi H" value="Umlazi G" />
+            <Picker.Item label="Umlazi J" value="Umlazi J" />
+            <Picker.Item label="Umlazi K" value="Umlazi K" />
+            <Picker.Item label="Umlazi L" value="Umlazi L" />
+            <Picker.Item label="Umlazi M" value="Umlazi M" />
+            <Picker.Item label="Umlazi N" value="Umlazi N" />
+            <Picker.Item label="Umlazi P" value="Umlazi P" />
+            <Picker.Item label="Umlazi Q" value="Umlazi Q" />
+            <Picker.Item label="Umlazi R" value="Umlazi R" />
+            <Picker.Item label="Umlazi S" value="Umlazi S" />
+            <Picker.Item label="Umlazi T" value="Umlazi T" />
+            <Picker.Item label="Umlazi U" value="Umlazi U" />
+            <Picker.Item label="Umlazi V" value="Umlazi V" />
+            <Picker.Item label="Umlazi W" value="Umlazi W" />
+            <Picker.Item label="Umlazi Y" value="Umlazi Y" />
+            <Picker.Item label="Umlazi Z" value="Umlazi Z" />
+            <Picker.Item label="Umlazi AA" value="Umlazi AA" />
+            <Picker.Item label="Umlazi BB" value="Umlazi BB" />
+            <Picker.Item label="Umlazi CC" value="Umlazi CC" />
+          </Picker>
+        </View>
 
         {/* Date Picker */}
         <TouchableOpacity style={styles.datePickerButton} onPress={showDatePicker}>
@@ -217,6 +248,20 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     textAlign: "center",
     width: "100%",
+  },
+  pickerWrapper: {
+    borderWidth: 1,
+    borderColor: "#DDD",
+    borderRadius: 5,
+    backgroundColor: "#F8F8F8",
+    marginBottom: 10,
+    overflow: "hidden",
+  },
+  picker: {
+    width: "100%",
+    height: 49,
+    color: "#333",
+    backgroundColor: "transparent",
   },
   inputContainer: { marginTop: 20 },
   input: {

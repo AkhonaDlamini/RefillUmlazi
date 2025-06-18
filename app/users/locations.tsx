@@ -109,6 +109,7 @@ export default function Locations() {
             accessibilityLabel="Help"
           >
             <Ionicons name="help-circle-outline" size={28} color="#1E90FF" />
+            <Text style={{ fontSize: 12, color: "#1E90FF" }}>Help</Text>
           </TouchableOpacity>
         </View>
       </View>
