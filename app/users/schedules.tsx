@@ -3,20 +3,32 @@ import { useRouter } from "expo-router";
 import { getAuth, signOut, updateProfile } from "firebase/auth";
 import { onValue, ref, update } from "firebase/database";
 import React, { useEffect, useState } from "react";
-import { Alert, FlatList, Modal, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import {
+  Alert,
+  FlatList,
+  Modal,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import { db } from "../../config/firebaseConfig";
 
 interface Schedule {
   id: string;
   location: string;
-  day: string;
+  day: string; // e.g. "Thursday"
+  date: string; // e.g. "2025-06-19"
   startTime: string;
   endTime: string;
 }
 
 export default function DashboardScreen() {
   const [allSchedules, setAllSchedules] = useState<Schedule[]>([]);
-  const [groupedSchedules, setGroupedSchedules] = useState<Record<string, Schedule[]>>({});
+  const [groupedSchedules, setGroupedSchedules] = useState<
+    Record<string, Schedule[]>
+  >({});
   const [selectedLocation, setSelectedLocation] = useState<string | null>(null);
   const [profileModalVisible, setProfileModalVisible] = useState(false);
   const [editingName, setEditingName] = useState("");
@@ -62,43 +74,36 @@ export default function DashboardScreen() {
       return;
     }
 
+    // Filter schedules by location (case-insensitive)
     const filtered = allSchedules.filter(
       (schedule) =>
         schedule.location.toLowerCase().trim() === selectedLocation.toLowerCase().trim()
     );
 
+    // Group schedules by exact date string
     const grouped = filtered.reduce((acc, schedule) => {
-      const day = schedule.day;
-      if (!acc[day]) acc[day] = [];
-      acc[day].push(schedule);
+      const date = schedule.date;
+      if (!acc[date]) acc[date] = [];
+      acc[date].push(schedule);
       return acc;
     }, {} as Record<string, Schedule[]>);
 
     setGroupedSchedules(grouped);
   }, [selectedLocation, allSchedules]);
 
-  const sortedDays = Object.keys(groupedSchedules).sort((a, b) => {
-    const daysOfWeek = [
-      "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday",
-    ];
-    return daysOfWeek.indexOf(a) - daysOfWeek.indexOf(b);
-  });
+  // Sort dates chronologically (ISO date strings naturally sort well)
+  const sortedDates = Object.keys(groupedSchedules).sort((a, b) => a.localeCompare(b));
 
-  // Function to get the nearest date for a given weekday
-  const getNearestDate = (day: string) => {
-    const daysOfWeek = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-    const today = new Date("2025-06-18"); // Current date: June 18, 2025
-    const dayIndex = daysOfWeek.indexOf(day);
-    const todayIndex = today.getDay();
-    const diff = (dayIndex - todayIndex + 7) % 7;
-    const targetDate = new Date(today);
-    targetDate.setDate(today.getDate() + diff);
-
-    return targetDate.toLocaleDateString("en-ZA", {
+  // Helper: format date string to "Thursday, 19 June 2025"
+  const formatDateHeader = (dateString: string) => {
+    const dateObj = new Date(dateString);
+    const options: Intl.DateTimeFormatOptions = {
+      weekday: "long",
       day: "numeric",
       month: "long",
       year: "numeric",
-    });
+    };
+    return dateObj.toLocaleDateString("en-ZA", options);
   };
 
   const handleOpenProfileModal = () => {
@@ -145,7 +150,10 @@ export default function DashboardScreen() {
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.appName}>Refill Umlazi</Text>
-        <TouchableOpacity style={styles.profileIcon} onPress={handleOpenProfileModal}>
+        <TouchableOpacity
+          style={styles.profileIcon}
+          onPress={handleOpenProfileModal}
+        >
           <Ionicons name="person-circle-outline" size={30} color="#1E90FF" />
         </TouchableOpacity>
       </View>
@@ -178,7 +186,9 @@ export default function DashboardScreen() {
               onPress={handleSaveName}
               disabled={saving}
             >
-              <Text style={styles.buttonText}>{saving ? "Saving..." : "Save Name"}</Text>
+              <Text style={styles.buttonText}>
+                {saving ? "Saving..." : "Save Name"}
+              </Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.button, styles.logoutButton]}
@@ -202,34 +212,33 @@ export default function DashboardScreen() {
           : "No location selected."}
       </Text>
 
-      {sortedDays.length === 0 ? (
+      {sortedDates.length === 0 ? (
         <Text style={styles.emptyText}>No schedules for this location.</Text>
       ) : (
         <FlatList
-          data={sortedDays}
-          keyExtractor={(day) => day}
-          renderItem={({ item: day }) => {
-            const date = getNearestDate(day);
-            return (
-              <View style={styles.card}>
-                <Text style={styles.cardTitle}>{`${day} - ${date}`}</Text>
-                {groupedSchedules[day].map((schedule, index) => (
-                  <View
-                    key={schedule.id}
-                    style={[
-                      styles.timeSlot,
-                      index === groupedSchedules[day].length - 1 && styles.lastTimeSlot,
-                    ]}
-                  >
-                    <Text style={styles.scheduleTime}>
-                      {schedule.startTime} - {schedule.endTime}
-                    </Text>
-                    <Text style={styles.scheduleSection}>Section {schedule.location}</Text>
-                  </View>
-                ))}
-              </View>
-            );
-          }}
+          data={sortedDates}
+          keyExtractor={(date) => date}
+          renderItem={({ item: date }) => (
+            <View style={styles.card}>
+              <Text style={styles.cardTitle}>{formatDateHeader(date)}</Text>
+              {groupedSchedules[date].map((schedule, index) => (
+                <View
+                  key={schedule.id}
+                  style={[
+                    styles.timeSlot,
+                    index === groupedSchedules[date].length - 1 && styles.lastTimeSlot,
+                  ]}
+                >
+                  <Text style={styles.scheduleTime}>
+                    {schedule.startTime} - {schedule.endTime}
+                  </Text>
+                  <Text style={styles.scheduleSection}>
+                    Section {schedule.location}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          )}
         />
       )}
     </View>
