@@ -1,0 +1,38 @@
+=======
+    "expo": "53.0.11",
+```
+```
+<<<<<<< SEARCH
+    "expo-blur": "~14.1.4",
+=======
+    "expo-blur": "~14.1.5",
+```
+```
+<<<<<<< SEARCH
+    "expo-image": "~2.1.7",
+=======
+    "expo-image": "~2.2.0",
+```
+```
+<<<<<<< SEARCH
+    "expo-splash-screen": "~0.30.8",
+=======
+    "expo-splash-screen": "~0.30.9",
+```
+```
+<<<<<<< SEARCH
+    "expo-symbols": "~0.4.4",
+=======
+    "expo-symbols": "~0.4.5",
+```
+```
+<<<<<<< SEARCH
+    "expo-system-ui": "~5.0.7",
+=======
+    "expo-system-ui": "~5.0.8",
+```
+```
+<<<<<<< SEARCH
+    "react-native": "0.79.2",
+=======
+    "react-native": "0.79.3",
