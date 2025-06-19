@@ -3,8 +3,17 @@ import { useRouter } from "expo-router";
 import { getAuth } from "firebase/auth";
 import { get, getDatabase, onValue, ref, remove, set } from "firebase/database";
 import React, { useEffect, useState } from "react";
-import {Alert,FlatList,Modal,StyleSheet,Text,TextInput,TouchableOpacity,View} from "react-native";
-import { globalStyles } from "../styles/globalStyles";
+import {
+  Alert,
+  FlatList,
+  Modal,
+  Platform,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
 
 export default function Locations() {
   const [inputText, setInputText] = useState<string>("");
@@ -86,78 +95,79 @@ export default function Locations() {
   );
 
   return (
-    <View style={globalStyles.container}>
-      {/* HEADER */}
-      <View style={globalStyles.header}>
-        <View style={styles.headerRow}>
-          <Text style={globalStyles.headerTitle}>My Locations</Text>
+    <View style={styles.container}>
+      <View style={styles.fixedHeader}>
+        <View style={styles.header}>
+          <View style={{ width: 32 }} />
+          <Text style={styles.appName}>Locations</Text>
           <TouchableOpacity
-            style={globalStyles.helpButton}
+            style={styles.helpButton}
             onPress={() => setHelpVisible(true)}
-            accessibilityLabel="Help"
           >
             <Ionicons name="help-circle-outline" size={22} color="#1E90FF" />
-            <Text style={globalStyles.helpButtonText}>Help</Text>
+            <Text style={styles.helpButtonText}>Help</Text>
           </TouchableOpacity>
         </View>
       </View>
 
-      <View style={styles.inputContainer}>
-        <TextInput
-          style={[styles.searchInput, isFocused && styles.searchInputFocused]}
-          placeholder="Type to search locations..."
-          value={inputText}
-          onChangeText={setInputText}
-          onFocus={() => setIsFocused(true)}
-          onBlur={() => setTimeout(() => setIsFocused(false), 200)}
-        />
-        {isFocused && inputText && filteredLocations.length > 0 && (
-          <View style={styles.suggestionsContainer}>
-            <FlatList
-              data={filteredLocations}
-              keyExtractor={(item) => item}
-              renderItem={renderSuggestion}
-              style={styles.suggestionsList}
-              keyboardShouldPersistTaps="handled"
-            />
-          </View>
-        )}
-        <TouchableOpacity
-          style={[
-            styles.addButton,
-            !inputText || !filteredLocations.includes(inputText)
-              ? { backgroundColor: "#b0c4de" }
-              : { backgroundColor: "#1E90FF" },
-          ]}
-          onPress={addLocation}
-          disabled={!inputText || !filteredLocations.includes(inputText)}
-        >
-          <Ionicons name="add-circle-outline" size={24} color="#FFF" />
-          <Text style={styles.addButtonText}>Add Location</Text>
-        </TouchableOpacity>
-      </View>
-
-      <Text style={styles.subHeader}>My Areas</Text>
-      <FlatList
-        data={locations}
-        keyExtractor={(item) => item}
-        ListEmptyComponent={
-          <Text style={styles.emptyText}>No locations added yet.</Text>
-        }
-        renderItem={({ item }) => (
+      <View style={styles.content}>
+        <View style={styles.inputContainer}>
+          <TextInput
+            style={[styles.searchInput, isFocused && styles.searchInputFocused]}
+            placeholder="Type to search locations..."
+            value={inputText}
+            onChangeText={setInputText}
+            onFocus={() => setIsFocused(true)}
+            onBlur={() => setTimeout(() => setIsFocused(false), 200)}
+          />
+          {isFocused && inputText && filteredLocations.length > 0 && (
+            <View style={styles.suggestionsContainer}>
+              <FlatList
+                data={filteredLocations}
+                keyExtractor={(item) => item}
+                renderItem={renderSuggestion}
+                style={styles.suggestionsList}
+                keyboardShouldPersistTaps="handled"
+              />
+            </View>
+          )}
           <TouchableOpacity
-            onPress={() => handleLocationPress(item)}
-            activeOpacity={0.7}
-            style={styles.locationItem}
+            style={[
+              styles.addButton,
+              !inputText || !filteredLocations.includes(inputText)
+                ? { backgroundColor: "#b0c4de" }
+                : { backgroundColor: "#1E90FF" },
+            ]}
+            onPress={addLocation}
+            disabled={!inputText || !filteredLocations.includes(inputText)}
           >
-            <Ionicons name="location-outline" size={24} color="#1E90FF" style={{ marginRight: 8 }} />
-            <Text style={styles.locationText}>{item}</Text>
-            <TouchableOpacity onPress={() => removeLocation(item)} style={{ padding: 4 }}>
-              <MaterialCommunityIcons name="delete-sweep-outline" size={28} color="black" />
-            </TouchableOpacity>
+            <Ionicons name="add-circle-outline" size={24} color="#FFF" />
+            <Text style={styles.addButtonText}>Add Location</Text>
           </TouchableOpacity>
-        )}
-      />
+        </View>
+                  <Text style={styles.subHeader}>My Areas</Text>
+
+        <FlatList
+          data={locations}
+          keyExtractor={(item) => item}
+          ListEmptyComponent={
+            <Text style={styles.emptyText}>No locations added yet.</Text>
+          }
+          renderItem={({ item }) => (
+            <TouchableOpacity
+              onPress={() => handleLocationPress(item)}
+              activeOpacity={0.7}
+              style={styles.locationItem}
+            >
+              <Ionicons name="location-outline" size={24} color="#1E90FF" style={{ marginRight: 8 }} />
+              <Text style={styles.locationText}>{item}</Text>
+              <TouchableOpacity onPress={() => removeLocation(item)} style={{ padding: 4 }}>
+                <MaterialCommunityIcons name="delete-sweep-outline" size={28} color="black" />
+              </TouchableOpacity>
+            </TouchableOpacity>
+          )}
+        />
+      </View>
 
       <Modal
         visible={helpVisible}
@@ -184,15 +194,57 @@ export default function Locations() {
 }
 
 const styles = StyleSheet.create({
-  headerRow: {
+  container: {
+    flex: 1,
+    backgroundColor: "#fff",
+  },
+  fixedHeader: {
+    position: "absolute",
+    top: Platform.OS === "ios" ? 40 : 20,
+    left: 0,
+    right: 0,
+    zIndex: 10,
+    paddingHorizontal: 15,
+    backgroundColor: "#fff",
+    borderBottomWidth: 1,
+    borderBottomColor: "#ddd",
+  },
+  header: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 10,
+  },
+  appName: {
+    fontSize: 24,
+    fontWeight: "bold",
+    color: "#1E90FF",
+  },
+  helpButton: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 12,
-    width: "100%",
+    gap: 4,
+    padding: 4,
+    marginRight: 8,
+  },
+  helpButtonText: {
+    fontSize: 14,
+    color: "#1E90FF",
+    fontWeight: "500",
+  },
+  content: {
+    flex: 1,
+    paddingTop: Platform.OS === "ios" ? 100 : 80, // space below fixed header
+    paddingHorizontal: 15,
+  },
+  subHeader: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: "#1E90FF",
+    marginBottom: 10,
   },
   inputContainer: {
-    marginTop: 20,
+    marginBottom: 20,
     width: "100%",
     position: "relative",
   },
@@ -225,7 +277,7 @@ const styles = StyleSheet.create({
     borderColor: "#DDD",
     borderRadius: 8,
     maxHeight: 200,
-    zIndex: 10,
+    zIndex: 20,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
@@ -249,8 +301,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     padding: 12,
     borderRadius: 8,
-    marginTop: 15,
-    marginBottom: 16,
     width: "100%",
   },
   addButtonText: {
@@ -258,13 +308,6 @@ const styles = StyleSheet.create({
     fontSize: 18,
     marginLeft: 10,
     fontWeight: "bold",
-  },
-  subHeader: {
-    fontSize: 16,
-    fontWeight: "bold",
-    color: "#1E90FF",
-    marginTop: 20,
-    marginBottom: 10,
   },
   emptyText: {
     textAlign: "center",
