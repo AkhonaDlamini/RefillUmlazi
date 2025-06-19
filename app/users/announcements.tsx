@@ -3,10 +3,12 @@ import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import { Alert, FlatList, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { getAuth } from "firebase/auth";
+import { globalStyles } from "../styles/globalStyles";
 
 export default function AnnouncementsScreen() {
   const { announcements, readIds, markAsRead } = useAnnouncements();
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [userCreationTime, setUserCreationTime] = useState<Date | null>(null);
   const router = useRouter();
   const auth = getAuth();
 
@@ -14,6 +16,11 @@ export default function AnnouncementsScreen() {
     if (!auth.currentUser) {
       Alert.alert("Authentication Required", "Please log in to view announcements.");
       router.replace("/auth/login");
+    } else {
+      const creationTime = auth.currentUser.metadata.creationTime;
+      if (creationTime) {
+        setUserCreationTime(new Date(creationTime));
+      }
     }
   }, [auth.currentUser, router]);
 
@@ -21,6 +28,12 @@ export default function AnnouncementsScreen() {
     const interval = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => clearInterval(interval);
   }, []);
+
+  const filteredAnnouncements = announcements.filter((item) => {
+    if (!userCreationTime || !item.timestamp) return true; // Show if no creation time or timestamp
+    const announcementTime = new Date(item.timestamp);
+    return announcementTime >= userCreationTime;
+  });
 
   const formatTimestamp = (timestamp?: string) => {
     if (!timestamp) return "";
@@ -37,7 +50,6 @@ export default function AnnouncementsScreen() {
       hour12: true,
     });
 
-    // If older than 24 hours, show only the date (e.g., "10 June 2025")
     if (diffMs > 24 * 60 * 60 * 1000) {
       return then.toLocaleDateString([], {
         day: "numeric",
@@ -46,7 +58,6 @@ export default function AnnouncementsScreen() {
       });
     }
 
-    // For less than 24 hours, show relative time and time of day
     if (days > 0) return `${days}d ago • ${then.toLocaleDateString()} ${timeOnly}`;
     if (hours > 0) return `${hours}h ago • ${timeOnly}`;
     if (minutes > 0) return `${minutes}m ago • ${timeOnly}`;
@@ -54,13 +65,15 @@ export default function AnnouncementsScreen() {
   };
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.appName}>Announcements</Text>
-      </View>
+    <View style={globalStyles.container}>
+      <View style={globalStyles.header}>
+  <View style={{ width: 32 }} /> 
+  <Text style={globalStyles.headerTitle}>Announcements</Text>
+  
+</View>
       {auth.currentUser ? (
         <FlatList
-          data={announcements}
+          data={filteredAnnouncements}
           keyExtractor={(item) => item.id}
           renderItem={({ item }) => {
             const isRead = readIds.includes(item.id);
@@ -76,7 +89,7 @@ export default function AnnouncementsScreen() {
                       <Text style={styles.newBadgeText}>NEW</Text>
                     </View>
                   )}
-                  <Text style={[styles.cardText, { flexShrink: 1, marginLeft: isRead ? 0 : 8 }]}>
+                  <Text style={[styles.cardText, { flexShrink: 1, marginLeft: isRead ? 0 : 12 }]}>
                     📣 {item.text}
                   </Text>
                 </View>
@@ -85,13 +98,13 @@ export default function AnnouncementsScreen() {
             );
           }}
           ListEmptyComponent={
-            <Text style={{ textAlign: "center", marginTop: 20, color: "#888" }}>
+            <Text style={styles.emptyText}>
               No announcements yet.
             </Text>
           }
         />
       ) : (
-        <Text style={{ textAlign: "center", marginTop: 20, color: "#888" }}>
+        <Text style={styles.emptyText}>
           Loading...
         </Text>
       )}
@@ -100,48 +113,84 @@ export default function AnnouncementsScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#FFFFFF" },
-  header: {
-    alignItems: "center",
-    paddingTop: 40,
-    paddingBottom: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: "#1E90FF",
+  container: {
+    flex: 1,
+    backgroundColor: "#F7F7F7", 
+    paddingHorizontal: 16,
   },
-  appName: { fontSize: 24, fontWeight: "bold", color: "#1E90FF" },
+header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 11,
+    borderBottomWidth: 3,
+    borderBottomColor: '#ddd',
+    backgroundColor: '#FFFFFF',
+  },
+  appName: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#1E90FF',
+    flex: 1,  
+    textAlign: 'center',
+  },
+  helpButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    padding: 4,
+  },
+  helpButtonText: {
+    fontSize: 14,
+    color: '#1E90FF',
+    fontWeight: '500',
+  },
   card: {
-    backgroundColor: "#F9F9F9",
-    padding: 15,
-    margin: 10,
-    borderRadius: 10,
+    backgroundColor: "#FFFFFF", 
+    marginVertical: 8,
+    borderRadius: 12,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    elevation: 4,
   },
   unreadCard: {
     borderWidth: 1,
     borderColor: "#1E90FF",
   },
-  cardText: { fontSize: 16, color: "#333" },
+  cardText: {
+    fontSize: 16,
+    color: "#333",
+    fontWeight: "500",
+    lineHeight: 22,
+  },
   timestamp: {
-    marginTop: 6,
+    marginTop: 8,
     fontSize: 12,
     color: "#888",
     fontStyle: "italic",
+    fontWeight: "400",
   },
   newBadge: {
     backgroundColor: "#1E90FF",
-    borderRadius: 6,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    marginLeft: 8,
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
     alignSelf: "flex-start",
   },
   newBadgeText: {
-    color: "#fff",
+    color: "#FFFFFF",
     fontSize: 10,
-    fontWeight: "bold",
-    letterSpacing: 1,
+    fontWeight: "600",
+    letterSpacing: 0.5,
+  },
+  emptyText: {
+    textAlign: "center",
+    marginTop: 40,
+    fontSize: 16,
+    color: "#888",
+    fontWeight: "400",
   },
 });

@@ -144,10 +144,11 @@ export default function DashboardScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
+        <View style={{ width: 32 }} /> 
         <Text style={styles.appName}>Refill Umlazi</Text>
         <TouchableOpacity
-          style={styles.profileIcon}
-          onPress={handleOpenProfileModal}
+          style={styles.helpButton}
+          onPress={handleOpenProfileModal} 
         >
           <Ionicons name="person-circle-outline" size={30} color="#1E90FF" />
         </TouchableOpacity>
@@ -243,20 +244,26 @@ export default function DashboardScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#FFFFFF", padding: 10 },
   header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingTop: 40,
-    paddingBottom: 10,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 15,
     borderBottomWidth: 1,
-    borderBottomColor: "#1E90FF",
+    borderBottomColor: '#ddd',
   },
   appName: {
-    flex: 1,
     fontSize: 24,
-    fontWeight: "bold",
-    color: "#1E90FF",
-    textAlign: "center",
+    fontWeight: 'bold',
+    color: '#1E90FF',
+    textAlign: 'center',
+    flex: 1, 
+  },
+  helpButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    padding: 4,
   },
   profileIcon: {
     paddingRight: 15,

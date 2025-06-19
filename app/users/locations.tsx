@@ -3,51 +3,42 @@ import { useRouter } from "expo-router";
 import { getAuth } from "firebase/auth";
 import { get, getDatabase, onValue, ref, remove, set } from "firebase/database";
 import React, { useEffect, useState } from "react";
-import { Alert, FlatList, Modal, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import {Alert,FlatList,Modal,StyleSheet,Text,TextInput,TouchableOpacity,View} from "react-native";
+import { globalStyles } from "../styles/globalStyles";
 
 export default function Locations() {
-  const [inputText, setInputText] = useState<string>(""); // Combined search and selected location
+  const [inputText, setInputText] = useState<string>("");
   const [locations, setLocations] = useState<string[]>([]);
-  const [isFocused, setIsFocused] = useState(false); // Track input focus for suggestions
+  const [isFocused, setIsFocused] = useState(false);
   const [helpVisible, setHelpVisible] = useState(false);
+
   const router = useRouter();
   const auth = getAuth();
   const db = getDatabase();
   const uid = auth.currentUser?.uid;
 
-  // Load user locations from Firebase
   useEffect(() => {
     if (!uid) return;
-
     const locationsRef = ref(db, `users/${uid}/locations`);
     const unsubscribe = onValue(locationsRef, (snapshot) => {
       const data = snapshot.val();
-      if (data) {
-        setLocations(Object.values(data));
-      } else {
-        setLocations([]);
-      }
+      setLocations(data ? Object.values(data) : []);
     });
-
     return () => unsubscribe();
   }, [uid, db]);
 
-  // List of available locations
   const availableLocations = [
     "Umlazi A", "Umlazi B", "Umlazi C", "Umlazi D", "Umlazi E",
     "Umlazi F", "Umlazi G", "Umlazi H", "Umlazi J", "Umlazi K",
     "Umlazi L", "Umlazi M", "Umlazi N", "Umlazi P", "Umlazi Q",
     "Umlazi R", "Umlazi S", "Umlazi T", "Umlazi U", "Umlazi V",
-    "Umlazi W", "Umlazi Y", "Umlazi Z", "Umlazi AA", "Umlazi BB",
-    "Umlazi CC",
+    "Umlazi W", "Umlazi Y", "Umlazi Z", "Umlazi AA", "Umlazi BB", "Umlazi CC",
   ];
 
-  // Filter locations based on input
   const filteredLocations = availableLocations.filter(loc =>
     loc.toLowerCase().includes(inputText.toLowerCase())
   );
 
-  // Add a location to Firebase
   const addLocation = async () => {
     if (!inputText.trim()) {
       Alert.alert("Error", "Please enter or select a location.");
@@ -63,10 +54,9 @@ export default function Locations() {
     }
     const updatedLocations = [...locations, inputText];
     await set(ref(db, `users/${uid}/locations`), updatedLocations);
-    setInputText(""); // Clear input after adding
+    setInputText("");
   };
 
-  // Remove a location and clear selection if needed
   const removeLocation = async (location: string) => {
     const updated = locations.filter((item) => item !== location);
     await set(ref(db, `users/${uid}/locations`), updated);
@@ -78,19 +68,17 @@ export default function Locations() {
     }
   };
 
-  // Set selected location and navigate to dashboard
   const handleLocationPress = async (item: string) => {
     await set(ref(db, `users/${uid}/selectedLocation`), item);
     router.push("/users/schedules");
   };
 
-  // Render suggestion item
   const renderSuggestion = ({ item }: { item: string }) => (
     <TouchableOpacity
       style={styles.suggestionItem}
       onPress={() => {
         setInputText(item);
-        setIsFocused(false); // Hide suggestions after selection
+        setIsFocused(false);
       }}
     >
       <Text style={styles.suggestionText}>{item}</Text>
@@ -98,24 +86,22 @@ export default function Locations() {
   );
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
+    <View style={globalStyles.container}>
+      {/* HEADER */}
+      <View style={globalStyles.header}>
         <View style={styles.headerRow}>
-          <View style={{ width: 32 }} />
-          <Text style={[styles.title, { textAlign: "center", flex: 1 }]}>My Locations</Text>
+          <Text style={globalStyles.headerTitle}>My Locations</Text>
           <TouchableOpacity
-  style={styles.helpButton}
-  onPress={() => setHelpVisible(true)}
-  accessibilityLabel="Help"
->
-  <Ionicons name="help-circle-outline" size={22} color="#1E90FF" />
-  <Text style={styles.helpButtonText}>Help</Text>
-</TouchableOpacity>
-
+            style={globalStyles.helpButton}
+            onPress={() => setHelpVisible(true)}
+            accessibilityLabel="Help"
+          >
+            <Ionicons name="help-circle-outline" size={22} color="#1E90FF" />
+            <Text style={globalStyles.helpButtonText}>Help</Text>
+          </TouchableOpacity>
         </View>
       </View>
 
-      {/* Search and add location */}
       <View style={styles.inputContainer}>
         <TextInput
           style={[styles.searchInput, isFocused && styles.searchInputFocused]}
@@ -123,7 +109,7 @@ export default function Locations() {
           value={inputText}
           onChangeText={setInputText}
           onFocus={() => setIsFocused(true)}
-          onBlur={() => setTimeout(() => setIsFocused(false), 200)} // Delay blur to allow taps
+          onBlur={() => setTimeout(() => setIsFocused(false), 200)}
         />
         {isFocused && inputText && filteredLocations.length > 0 && (
           <View style={styles.suggestionsContainer}>
@@ -139,7 +125,9 @@ export default function Locations() {
         <TouchableOpacity
           style={[
             styles.addButton,
-            !inputText || !filteredLocations.includes(inputText) ? { backgroundColor: "#b0c4de" } : { backgroundColor: "#1E90FF" }
+            !inputText || !filteredLocations.includes(inputText)
+              ? { backgroundColor: "#b0c4de" }
+              : { backgroundColor: "#1E90FF" },
           ]}
           onPress={addLocation}
           disabled={!inputText || !filteredLocations.includes(inputText)}
@@ -149,7 +137,6 @@ export default function Locations() {
         </TouchableOpacity>
       </View>
 
-      {/* Added locations */}
       <Text style={styles.subHeader}>My Areas</Text>
       <FlatList
         data={locations}
@@ -158,30 +145,20 @@ export default function Locations() {
           <Text style={styles.emptyText}>No locations added yet.</Text>
         }
         renderItem={({ item }) => (
-  <TouchableOpacity
-    onPress={() => handleLocationPress(item)}
-    activeOpacity={0.7}
-    style={styles.locationItem}
-  >
-    <Ionicons
-      name="location-outline"
-      size={24}
-      color="#1E90FF"
-      style={{ marginRight: 8 }}
-    />
-    <Text style={styles.locationText}>{item}</Text>
-    <TouchableOpacity
-      onPress={() => removeLocation(item)}
-      style={{ padding: 4 }}
-    >
-<MaterialCommunityIcons name="delete-sweep-outline" size={28} color="black" />
-    </TouchableOpacity>
-  </TouchableOpacity>
-)}
-
+          <TouchableOpacity
+            onPress={() => handleLocationPress(item)}
+            activeOpacity={0.7}
+            style={styles.locationItem}
+          >
+            <Ionicons name="location-outline" size={24} color="#1E90FF" style={{ marginRight: 8 }} />
+            <Text style={styles.locationText}>{item}</Text>
+            <TouchableOpacity onPress={() => removeLocation(item)} style={{ padding: 4 }}>
+              <MaterialCommunityIcons name="delete-sweep-outline" size={28} color="black" />
+            </TouchableOpacity>
+          </TouchableOpacity>
+        )}
       />
 
-      {/* Help Modal */}
       <Modal
         visible={helpVisible}
         transparent
@@ -192,15 +169,11 @@ export default function Locations() {
           <View style={styles.modalContainer}>
             <Text style={styles.modalTitle}>Help</Text>
             <Text style={styles.modalText}>
-              Type in the search bar to find a location.
-              Select a location from the suggestions and tap &quot;Add Location&quot; to add it to your list.
-              Tap a location in your list to set it as your active location.
-              Tap the trash icon to remove a location from your list.
+              Type in the search bar to find a location. Select a location from the suggestions and
+              tap &quot;Add Location&quot; to add it to your list. Tap a location in your list to set it as
+              your active location. Tap the trash icon to remove a location from your list.
             </Text>
-            <TouchableOpacity
-              style={styles.modalCloseButton}
-              onPress={() => setHelpVisible(false)}
-            >
+            <TouchableOpacity style={styles.modalCloseButton} onPress={() => setHelpVisible(false)}>
               <Text style={styles.modalCloseButtonText}>Close</Text>
             </TouchableOpacity>
           </View>
@@ -211,49 +184,17 @@ export default function Locations() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#FFFFFF", paddingHorizontal: 20 },
-  header: {
-    paddingTop: 40,
-    paddingBottom: 10,
-    alignItems: "center",
-    borderBottomWidth: 1.5,
-    borderBottomColor: "#1E90FF",
-  },
   headerRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-  },
-  title: { fontSize: 24, fontWeight: "bold", color: "#1E90FF" },
-  subHeader: {
-    fontSize: 16,
-    fontWeight: "bold",
-    color: "#1E90FF",
-    marginTop: 20,
-    marginBottom: 10,
-  },
-  emptyText: { textAlign: "center", marginTop: 10, color: "gray" },
-  locationItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    backgroundColor: "#f9f9f9",
-    borderWidth: 1,
-    borderColor: "#ddd",
-    borderRadius: 6,
-    padding: 12,
-    marginBottom: 12,
-  },
-  locationText: {
-    fontSize: 16,
-    color: "#333",
-    flex: 1,
-    marginLeft: 8,
+    paddingHorizontal: 12,
+    width: "100%",
   },
   inputContainer: {
     marginTop: 20,
     width: "100%",
-    position: "relative", // For positioning suggestions
+    position: "relative",
   },
   searchInput: {
     width: "100%",
@@ -276,7 +217,7 @@ const styles = StyleSheet.create({
   },
   suggestionsContainer: {
     position: "absolute",
-    top: 52, // Below search input (44 height + 8 margin)
+    top: 52,
     left: 0,
     right: 0,
     backgroundColor: "#FFF",
@@ -318,57 +259,70 @@ const styles = StyleSheet.create({
     marginLeft: 10,
     fontWeight: "bold",
   },
-  helpIcon: {
-    padding: 4,
-    marginRight: 8,
+  subHeader: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: "#1E90FF",
+    marginTop: 20,
+    marginBottom: 10,
+  },
+  emptyText: {
+    textAlign: "center",
+    marginTop: 10,
+    color: "gray",
+  },
+  locationItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: "#f9f9f9",
+    borderWidth: 1,
+    borderColor: "#ddd",
+    borderRadius: 6,
+    padding: 12,
+    marginBottom: 12,
+  },
+  locationText: {
+    fontSize: 16,
+    color: "#333",
+    flex: 1,
+    marginLeft: 8,
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.3)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "rgba(0,0,0,0.3)",
+    justifyContent: "center",
+    alignItems: "center",
     paddingHorizontal: 20,
   },
   modalContainer: {
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     borderRadius: 18,
     padding: 24,
     maxWidth: 400,
-    width: '100%',
+    width: "100%",
   },
   modalTitle: {
-  fontSize: 22,
-  fontWeight: '700',
-  marginBottom: 14,
-  color: '#1E90FF', 
+    fontSize: 22,
+    fontWeight: "700",
+    marginBottom: 14,
+    color: "#1E90FF",
   },
   modalText: {
     fontSize: 16,
-    color: '#444',
+    color: "#444",
     marginBottom: 20,
     lineHeight: 22,
   },
   modalCloseButton: {
-  backgroundColor: '#1E90FF', 
-  paddingVertical: 12,
-  borderRadius: 14,
+    backgroundColor: "#1E90FF",
+    paddingVertical: 12,
+    borderRadius: 14,
   },
   modalCloseButtonText: {
-    color: '#fff',
-    fontWeight: '600',
+    color: "#fff",
+    fontWeight: "600",
     fontSize: 16,
-    textAlign: 'center',
+    textAlign: "center",
   },
-  helpButton: {
-  flexDirection: "row",
-  alignItems: "center",
-  gap: 4,
-  padding: 4,
-  marginRight: 8,
-},
-helpButtonText: {
-  fontSize: 14,
-  color: "#1E90FF",
-  fontWeight: "500",
-},
 });

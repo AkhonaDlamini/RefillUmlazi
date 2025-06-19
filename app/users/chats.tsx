@@ -9,7 +9,7 @@ import { auth, db } from '../../config/firebaseConfig';
 type Chat = {
   id: string;
   userId: string;
-  displayName?: string; // Added to store sender's display name
+  displayName?: string; 
   message: string;
   timestamp: string;
   reactions?: { [userId: string]: string };
@@ -390,7 +390,10 @@ export default function UserChat() {
 
   return (
     <View style={styles.container}>
+      <View style={styles.headerContainer}> {/* New container for consistency */}
       <Text style={styles.header}>Community Chat</Text>
+      
+    </View>
       <FlatList
         data={chats}
         keyExtractor={item => item.id}
@@ -486,7 +489,33 @@ function getSafeUserId(userId: string): string {
 }
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#FFFFFF' },
-  header: { fontSize: 24, fontWeight: 'bold', color: '#1E90FF', textAlign: 'center', paddingTop: 40, paddingBottom: 10, borderBottomWidth: 1, borderBottomColor: '#1E90FF' },
+  headerContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: '#ddd',
+  },
+  header: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#1E90FF',
+    flex: 1,
+    textAlign: 'center',
+  },
+  helpButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    padding: 4,
+  },
+  helpButtonText: {
+    fontSize: 14,
+    color: '#1E90FF',
+    fontWeight: '500',
+  },
   reportCard: { backgroundColor: '#F0F0F0', padding: 15, marginHorizontal: 10, marginBottom: 15, borderRadius: 10 },
   metaRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 5 },
   metaText: { fontSize: 13, color: '#666' },
