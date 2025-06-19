@@ -18,8 +18,8 @@ import { db } from "../../config/firebaseConfig";
 interface Schedule {
   id: string;
   location: string;
-  day: string; // e.g. "Thursday"
-  date: string; // e.g. "2025-06-19"
+  day: string; 
+  date: string; 
   startTime: string;
   endTime: string;
 }
@@ -74,13 +74,11 @@ export default function DashboardScreen() {
       return;
     }
 
-    // Filter schedules by location (case-insensitive)
     const filtered = allSchedules.filter(
       (schedule) =>
         schedule.location.toLowerCase().trim() === selectedLocation.toLowerCase().trim()
     );
 
-    // Group schedules by exact date string
     const grouped = filtered.reduce((acc, schedule) => {
       const date = schedule.date;
       if (!acc[date]) acc[date] = [];
@@ -91,10 +89,8 @@ export default function DashboardScreen() {
     setGroupedSchedules(grouped);
   }, [selectedLocation, allSchedules]);
 
-  // Sort dates chronologically (ISO date strings naturally sort well)
   const sortedDates = Object.keys(groupedSchedules).sort((a, b) => a.localeCompare(b));
 
-  // Helper: format date string to "Thursday, 19 June"
   const formatDateHeader = (dateString: string) => {
     const dateObj = new Date(dateString);
     const options: Intl.DateTimeFormatOptions = {

@@ -1,5 +1,3 @@
-// index.tsx
-
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
 import { onAuthStateChanged } from "firebase/auth";
@@ -48,12 +46,13 @@ Notifications.setNotificationHandler({
     shouldShowList: true, // Add this property
   }),
 });
+
 export default function IndexScreen() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
 
   // Register device for push notifications and save token
-  async function registerForPushNotificationsAsync(userId: string) {
+ /* async function registerForPushNotificationsAsync(userId: string) {
     if (!Device.isDevice) {
       Alert.alert("Push notifications only work on physical devices");
       return;
@@ -81,7 +80,7 @@ export default function IndexScreen() {
         lightColor: "#FF231F7C",
       });
     }
-  }
+  }*/
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -89,7 +88,7 @@ export default function IndexScreen() {
 
       if (user) {
         try {
-          await registerForPushNotificationsAsync(user.uid);
+          //await registerForPushNotificationsAsync(user.uid);
 
           const roleSnap = await get(ref(db, `users/${user.uid}/role`));
           const role = roleSnap.val();

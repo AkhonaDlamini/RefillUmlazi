@@ -10,7 +10,6 @@ export default function AnnouncementsScreen() {
   const router = useRouter();
   const auth = getAuth();
 
-  // Redirect to login if not authenticated
   useEffect(() => {
     if (!auth.currentUser) {
       Alert.alert("Authentication Required", "Please log in to view announcements.");

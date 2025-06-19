@@ -1,4 +1,4 @@
-import { Ionicons } from "@expo/vector-icons";
+import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { getAuth } from "firebase/auth";
 import { get, getDatabase, onValue, ref, remove, set } from "firebase/database";
@@ -104,13 +104,14 @@ export default function Locations() {
           <View style={{ width: 32 }} />
           <Text style={[styles.title, { textAlign: "center", flex: 1 }]}>My Locations</Text>
           <TouchableOpacity
-            style={styles.helpIcon}
-            onPress={() => setHelpVisible(true)}
-            accessibilityLabel="Help"
-          >
-            <Ionicons name="help-circle-outline" size={28} color="#1E90FF" />
-            <Text style={{ fontSize: 12, color: "#1E90FF" }}>Help</Text>
-          </TouchableOpacity>
+  style={styles.helpButton}
+  onPress={() => setHelpVisible(true)}
+  accessibilityLabel="Help"
+>
+  <Ionicons name="help-circle-outline" size={22} color="#1E90FF" />
+  <Text style={styles.helpButtonText}>Help</Text>
+</TouchableOpacity>
+
         </View>
       </View>
 
@@ -157,19 +158,27 @@ export default function Locations() {
           <Text style={styles.emptyText}>No locations added yet.</Text>
         }
         renderItem={({ item }) => (
-          <View style={styles.locationItem}>
-            <Ionicons name="location-outline" size={24} color="#1E90FF" style={{ marginRight: 8 }} />
-            <Text style={styles.locationText}>{item}</Text>
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-              <TouchableOpacity onPress={() => handleLocationPress(item)}>
-                <Ionicons name="checkmark-circle-outline" size={22} color="#388e3c" />
-              </TouchableOpacity>
-              <TouchableOpacity onPress={() => removeLocation(item)}>
-                <Ionicons name="trash-outline" size={22} color="red" />
-              </TouchableOpacity>
-            </View>
-          </View>
-        )}
+  <TouchableOpacity
+    onPress={() => handleLocationPress(item)}
+    activeOpacity={0.7}
+    style={styles.locationItem}
+  >
+    <Ionicons
+      name="location-outline"
+      size={24}
+      color="#1E90FF"
+      style={{ marginRight: 8 }}
+    />
+    <Text style={styles.locationText}>{item}</Text>
+    <TouchableOpacity
+      onPress={() => removeLocation(item)}
+      style={{ padding: 4 }}
+    >
+<MaterialCommunityIcons name="delete-sweep-outline" size={28} color="black" />
+    </TouchableOpacity>
+  </TouchableOpacity>
+)}
+
       />
 
       {/* Help Modal */}
@@ -180,19 +189,19 @@ export default function Locations() {
         onRequestClose={() => setHelpVisible(false)}
       >
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>How to use this page</Text>
+          <View style={styles.modalContainer}>
+            <Text style={styles.modalTitle}>Help</Text>
             <Text style={styles.modalText}>
-              - Type in the search bar to find a location.{"\n"}
-              - Select a location from the suggestions and tap &quot;Add Location&quot; to add it to your list.{"\n"}
-              - Tap a location in your list to set it as your active location.{"\n"}
-              - Tap the trash icon to remove a location from your list.
+              Type in the search bar to find a location.
+              Select a location from the suggestions and tap &quot;Add Location&quot; to add it to your list.
+              Tap a location in your list to set it as your active location.
+              Tap the trash icon to remove a location from your list.
             </Text>
             <TouchableOpacity
-              style={styles.modalButton}
+              style={styles.modalCloseButton}
               onPress={() => setHelpVisible(false)}
             >
-              <Text style={styles.modalButtonText}>Close</Text>
+              <Text style={styles.modalCloseButtonText}>Close</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -219,7 +228,7 @@ const styles = StyleSheet.create({
   subHeader: {
     fontSize: 16,
     fontWeight: "bold",
-    color: "#111",
+    color: "#1E90FF",
     marginTop: 20,
     marginBottom: 10,
   },
@@ -315,37 +324,51 @@ const styles = StyleSheet.create({
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.3)",
-    justifyContent: "center",
-    alignItems: "center",
+    backgroundColor: 'rgba(0,0,0,0.3)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 20,
   },
-  modalContent: {
-    backgroundColor: "#fff",
-    borderRadius: 12,
+  modalContainer: {
+    backgroundColor: '#fff',
+    borderRadius: 18,
     padding: 24,
-    width: "85%",
-    alignItems: "center",
+    maxWidth: 400,
+    width: '100%',
   },
   modalTitle: {
-    fontSize: 20,
-    fontWeight: "bold",
-    marginBottom: 10,
-    color: "#1E90FF",
+  fontSize: 22,
+  fontWeight: '700',
+  marginBottom: 14,
+  color: '#1E90FF', 
   },
   modalText: {
-    color: "#333",
-    marginBottom: 16,
-    textAlign: "center",
+    fontSize: 16,
+    color: '#444',
+    marginBottom: 20,
+    lineHeight: 22,
   },
-  modalButton: {
-    backgroundColor: "#1E90FF",
-    borderRadius: 8,
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    marginTop: 10,
+  modalCloseButton: {
+  backgroundColor: '#1E90FF', 
+  paddingVertical: 12,
+  borderRadius: 14,
   },
-  modalButtonText: {
-    color: "#fff",
-    fontWeight: "bold",
+  modalCloseButtonText: {
+    color: '#fff',
+    fontWeight: '600',
+    fontSize: 16,
+    textAlign: 'center',
   },
+  helpButton: {
+  flexDirection: "row",
+  alignItems: "center",
+  gap: 4,
+  padding: 4,
+  marginRight: 8,
+},
+helpButtonText: {
+  fontSize: 14,
+  color: "#1E90FF",
+  fontWeight: "500",
+},
 });

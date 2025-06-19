@@ -26,7 +26,6 @@ export default function LoginScreen() {
   const [snackbarMsg, setSnackbarMsg] = useState("");
   const [snackbarColor, setSnackbarColor] = useState("#d32f2f");
 
-  // Load saved credentials
   useEffect(() => {
     const loadCredentials = async () => {
       try {

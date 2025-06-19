@@ -26,7 +26,16 @@ function TabLayoutContent() {
         options={{
           title: "Schedules",
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="calendar-outline" size={size + 2} color={color} />
+            <Ionicons name="home-outline" size={size + 2} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="locations"
+        options={{
+          title: "Locations",
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="map-outline" size={size + 2} color={color} />
           ),
         }}
       />
@@ -55,15 +64,6 @@ function TabLayoutContent() {
           title: "Chats",
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="chatbubble-outline" size={size + 2} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="locations"
-        options={{
-          title: "Locations",
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="map-outline" size={size + 2} color={color} />
           ),
         }}
       />
