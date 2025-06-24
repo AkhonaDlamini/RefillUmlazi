@@ -45,19 +45,19 @@ refillumlazi/
 
 # ✨ Key Features
 
-**- 📍 Map View:** Interactive, zoomable map showing clustered water refill stations.
-**- 🔎 Smart Search:** Autocomplete search bar with live suggestions.
-**- 🧾 Station Info:** Each marker provides station number, address, water status, and last updated time.
-**- 📢 Push Notifications:** Triggered on events like:
+- 📍 **Map View:** Interactive, zoomable map showing clustered water refill stations.
+- 🔎 **Smart Search:** Autocomplete search bar with live suggestions.
+- 🧾 **Station Info:** Each marker provides station number, address, water status, and last updated time.
+- 📢 **Push Notifications:** Triggered on events like:
    - New station added
    - Station status changes (available, unavailable, low pressure)
    - User-submitted reports
    - Chat replies and announcements
    - Scheduled water outages
-**- 💬 Real-Time Chat:** Users can message admins; replies are displayed in a threaded format.
-**- 📝 Reporting:** Users can report station issues directly from the app.
-🔐 Role-Based Access: Separate access paths for Admins and Users.
-📅 Scheduling: Admins can schedule outages/maintenance and broadcast to users.
+- 💬 **Real-Time Chat:** Users can message admins; replies are displayed in a threaded format.
+- 📝 **Reporting:** Users can report station issues directly from the app.
+- 🔐 **Role-Based Access:** Separate access paths for Admins and Users.
+- 📅 **Scheduling:** Admins can schedule outages/maintenance and broadcast to users.
 
 # 🧠 Built With
 - React Native
