@@ -1,50 +1,100 @@
-# Welcome to your Expo app 👋
+# 💧 RefillUmlazi – Community Water Refill App
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+**RefillUmlazi** is a React Native mobile application built using [Expo](https://expo.dev), designed to help residents of Umlazi locate and interact with water refill stations in their community. The app leverages Firebase Realtime Database for live data syncing and includes features for chat, notifications, and reporting.
 
-## Get started
+---
 
-1. Install dependencies
+## 📲 About the App
 
-   ```bash
-   npm install
-   ```
+RefillUmlazi is built to solve a local infrastructure challenge: inconsistent water access. By mapping refill stations, tracking their availability, and enabling two-way communication between users and admins, this app empowers residents to get updated info and take action.
 
-2. Start the app
+---
 
-   ```bash
-   npx expo start
-   ```
+## 🚀 Getting Started
 
-In the output, you'll find options to open the app in a
+Follow these steps to run the app locally.
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+### 1. Clone the Repository
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+git clone https://github.com/your-username/refillumlazi.git
+cd refillumlazi
 
-## Get a fresh project
+---
 
-When you're ready, run:
+### 2. Install Dependencies
 
-```bash
-npm run reset-project
-```
+npm install
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+### 3. Start the App
 
-## Learn more
+npx expo start
 
-To learn more about developing your project with Expo, look at the following resources:
+Use Expo Go (iOS/Android), an emulator, or a development build to test the app.
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+# 📦 Project Structure
 
-## Join the community
+refillumlazi/
+│
+├── app/                # Main screens and navigation
+├── components/         # Reusable UI components
+├── firebase/           # Firebase configuration and utilities
+├── assets/             # Icons, images, fonts
+├── App.tsx             # Entry point
+├── app.json            # Expo config
+└── README.md
 
-Join our community of developers creating universal apps.
+# ✨ Key Features
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+**- 📍 Map View:** Interactive, zoomable map showing clustered water refill stations.
+**- 🔎 Smart Search:** Autocomplete search bar with live suggestions.
+**- 🧾 Station Info:** Each marker provides station number, address, water status, and last updated time.
+**- 📢 Push Notifications:** Triggered on events like:
+   - New station added
+   - Station status changes (available, unavailable, low pressure)
+   - User-submitted reports
+   - Chat replies and announcements
+   - Scheduled water outages
+**- 💬 Real-Time Chat:** Users can message admins; replies are displayed in a threaded format.
+**- 📝 Reporting:** Users can report station issues directly from the app.
+🔐 Role-Based Access: Separate access paths for Admins and Users.
+📅 Scheduling: Admins can schedule outages/maintenance and broadcast to users.
+
+# 🧠 Built With
+- React Native
+- Expo
+- Firebase Realtime Database
+- Firebase Cloud Functions
+- Expo Push Notifications
+- React Native Maps
+- TypeScript
+
+# 🛠 Setup Requirements
+1. Before running the app, you must:
+2. Create a Firebase project
+3. Enable Realtime Database & Authentication
+4. Set up push notification credentials with Expo
+5. Store your Firebase config in a file at /firebase/config.ts
+
+# 🧪 Admin Features
+- Add/edit/delete refill stations
+- Update water availability
+- Reply to user reports/chats
+- Monitor push notifications
+
+# 📚 Learn More
+[Expo Docs](https://docs.expo.dev/)
+[Firebase Realtime Database](https://firebase.google.com/docs/database)
+[Push Notifications](https://firebase.google.com/docs/cloud-messaging)
+[React Native Maps](https://docs.expo.dev/versions/latest/sdk/map-view/)
+
+# 👩🏽‍💻 Author
+Tech Nomads
+Final-year student in Diploma in IT: Software Development
+Project for Development Software 3
+
+
+🙌 Acknowledgements
+- Umlazi residents for inspiring this project
+- Expo and Firebase for powerful free developer tools
+- My IS3 project team for collaboration and documentation support
+
