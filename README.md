@@ -1,4 +1,4 @@
-# 💧 RefillUmlazi – Community Water Refill App
+# RefillUmlazi💧  – Community Water Refill App
 
 **RefillUmlazi** is a React Native mobile application built using [Expo](https://expo.dev), designed to help residents of Umlazi locate and interact with water refill stations in their community. The app leverages Firebase Realtime Database for live data syncing and includes features for chat, notifications, and reporting.
 
