@@ -2,25 +2,16 @@ import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { getAuth } from "firebase/auth";
 import { get, getDatabase, onValue, ref, remove, set } from "firebase/database";
-import React, { useEffect, useState } from "react";
-import {
-  Alert,
-  FlatList,
-  Modal,
-  Platform,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import React, { useEffect, useState, useContext } from "react";
+import {Alert,FlatList,Modal,Platform,StyleSheet,Text,TextInput,TouchableOpacity,View} from "react-native";
+import { ThemeContext } from "../../context/ThemeContext";
 
 export default function Locations() {
   const [inputText, setInputText] = useState<string>("");
   const [locations, setLocations] = useState<string[]>([]);
   const [isFocused, setIsFocused] = useState(false);
   const [helpVisible, setHelpVisible] = useState(false);
-
+  const { isDark } = useContext(ThemeContext);
   const router = useRouter();
   const auth = getAuth();
   const db = getDatabase();
@@ -84,44 +75,53 @@ export default function Locations() {
 
   const renderSuggestion = ({ item }: { item: string }) => (
     <TouchableOpacity
-      style={styles.suggestionItem}
+      style={[styles.suggestionItem,  { backgroundColor: isDark ? "#23272b" : "#FFF" }]}
       onPress={() => {
         setInputText(item);
         setIsFocused(false);
       }}
     >
-      <Text style={styles.suggestionText}>{item}</Text>
+      <Text style={[styles.suggestionText, { color: isDark ? "#fff" : "#333" }]}>{item}</Text>
     </TouchableOpacity>
   );
 
   return (
-    <View style={styles.container}>
-      <View style={styles.fixedHeader}>
-        <View style={styles.header}>
-          <View style={{ width: 32 }} />
-          <Text style={styles.appName}>Locations</Text>
-          <TouchableOpacity
-            style={styles.helpButton}
-            onPress={() => setHelpVisible(true)}
-          >
-            <Ionicons name="help-circle-outline" size={22} color="#1E90FF" />
-            <Text style={styles.helpButtonText}>Help</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
+    <View style={[styles.container, { backgroundColor: isDark ? "#181818" : "#FFFFFF" }]}>
+<View style={[styles.fixedHeader, { backgroundColor: isDark ? "#181818" : "#fff", borderBottomColor: "#1E90FF" }]}>
+  <View style={styles.header}>
+    <View style={{ width: 32 }} />
+    <Text style={styles.appName}>Locations</Text>
+    <TouchableOpacity style={styles.helpButton} onPress={() => setHelpVisible(true)}>
+      <Ionicons name="help-circle-outline" size={22} color="#1E90FF" />
+      <Text style={styles.helpButtonText}>Help</Text>
+    </TouchableOpacity>
+  </View>
+</View>
+
 
       <View style={styles.content}>
         <View style={styles.inputContainer}>
           <TextInput
-            style={[styles.searchInput, isFocused && styles.searchInputFocused]}
+             style={[
+            styles.searchInput,
+            isFocused && styles.searchInputFocused,
+            {
+              backgroundColor: isDark ? "#23272b" : "#F8FAFF",
+              color: isDark ? "#fff" : "#222",
+              borderColor: isDark ? "#444" : "#DDD"
+            }]}
             placeholder="Type to search locations..."
+            placeholderTextColor={isDark ? "#aaa" : "#888"}
             value={inputText}
             onChangeText={setInputText}
             onFocus={() => setIsFocused(true)}
             onBlur={() => setTimeout(() => setIsFocused(false), 200)}
           />
           {isFocused && inputText && filteredLocations.length > 0 && (
-            <View style={styles.suggestionsContainer}>
+            <View style={[
+            styles.suggestionsContainer,
+            { backgroundColor: isDark ? "#23272b" : "#FFF", borderColor: isDark ? "#444" : "#DDD" }
+          ]}>
               <FlatList
                 data={filteredLocations}
                 keyExtractor={(item) => item}
@@ -145,24 +145,32 @@ export default function Locations() {
             <Text style={styles.addButtonText}>Add Location</Text>
           </TouchableOpacity>
         </View>
-                  <Text style={styles.subHeader}>My Areas</Text>
+        <Text style={styles.subHeader}>My Areas</Text>
 
         <FlatList
           data={locations}
           keyExtractor={(item) => item}
           ListEmptyComponent={
-            <Text style={styles.emptyText}>No locations added yet.</Text>
+            <Text style={[styles.emptyText, { color: isDark ? "#aaa" : "gray" }]}>No locations added yet.</Text>
           }
           renderItem={({ item }) => (
             <TouchableOpacity
               onPress={() => handleLocationPress(item)}
               activeOpacity={0.7}
-              style={styles.locationItem}
+              style={[
+            styles.locationItem,
+            { backgroundColor: isDark ? "#23272b" : "#f9f9f9", borderColor: isDark ? "#444" : "#ddd" }
+          ]}
             >
               <Ionicons name="location-outline" size={24} color="#1E90FF" style={{ marginRight: 8 }} />
-              <Text style={styles.locationText}>{item}</Text>
+              <Text style={[styles.locationText, { color: isDark ? "#fff" : "#333" }]}>{item}</Text>
               <TouchableOpacity onPress={() => removeLocation(item)} style={{ padding: 4 }}>
-                <MaterialCommunityIcons name="delete-sweep-outline" size={28} color="black" />
+                <MaterialCommunityIcons
+  name="delete-sweep-outline"
+  size={28}
+  color={isDark ? "#fff" : "#000"} // dynamic color based on theme
+/>
+
               </TouchableOpacity>
             </TouchableOpacity>
           )}
@@ -176,9 +184,11 @@ export default function Locations() {
         onRequestClose={() => setHelpVisible(false)}
       >
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContainer}>
+          <View style={[styles.modalContainer,
+            { backgroundColor: isDark ? "#23272b" : "#fff" }
+          ]}>
             <Text style={styles.modalTitle}>Help</Text>
-            <Text style={styles.modalText}>
+            <Text style={[styles.modalText, { color: isDark ? "#fff" : "#333" }]}>
               Type in the search bar to find a location. Select a location from the suggestions and
               tap &quot;Add Location&quot; to add it to your list. Tap a location in your list to set it as
               your active location. Tap the trash icon to remove a location from your list.
@@ -199,22 +209,21 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
   },
   fixedHeader: {
-    position: "absolute",
-    top: Platform.OS === "ios" ? 40 : 20,
-    left: 0,
-    right: 0,
-    zIndex: 10,
-    paddingHorizontal: 15,
-    backgroundColor: "#fff",
-    borderBottomWidth: 1,
-    borderBottomColor: "#ddd",
-  },
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingVertical: 10,
-  },
+  position: "absolute",
+  top: Platform.OS === "ios" ? 15 : 20,
+  left: 0,
+  right: 0,
+  zIndex: 10,
+  paddingHorizontal: 0, 
+  borderBottomWidth: 1,
+},
+header: {
+  flexDirection: "row",
+  justifyContent: "space-between",
+  alignItems: "center",
+  paddingVertical: 12,
+  paddingHorizontal: 15, 
+},
   appName: {
     fontSize: 24,
     fontWeight: "bold",
@@ -234,7 +243,7 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    paddingTop: Platform.OS === "ios" ? 100 : 80, // space below fixed header
+    paddingTop: Platform.OS === "ios" ? 120 : 100, // space below fixed header
     paddingHorizontal: 15,
   },
   subHeader: {

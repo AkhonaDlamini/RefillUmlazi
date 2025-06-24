@@ -1,23 +1,34 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
-import { Platform } from "react-native";
+import React, { useContext } from "react";
 import { AnnouncementsProvider, useAnnouncements } from "../../context/AnnouncementsContext";
-import React from "react";
+import { ThemeContext, ThemeProvider } from "../../context/ThemeContext";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 function TabLayoutContent() {
   const { unreadCount }: { unreadCount: number } = useAnnouncements();
+  const { isDark } = useContext(ThemeContext);
+  const insets = useSafeAreaInsets();
 
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarShowLabel: false, // Hide labels for a cleaner look
-        tabBarActiveTintColor: "#1E90FF",
-        tabBarInactiveTintColor: "gray",
+        tabBarShowLabel: false,
         tabBarStyle: {
-          height: Platform.OS === "android" ? 48 : 60, // Reduce height
+          backgroundColor: isDark ? "#23272b" : "#fff",
+          borderTopColor: isDark ? "#444" : "#eee",
+          height: 60 + insets.bottom,
           paddingTop: 4,
-          paddingBottom: Platform.OS === "android" ? 2 : 6, // Less bottom padding
+          paddingBottom: insets.bottom > 0 ? insets.bottom : 8,
+        },
+        tabBarActiveTintColor: "#1E90FF",
+        tabBarInactiveTintColor: isDark ? "#aaa" : "#888",
+        headerStyle: {
+          backgroundColor: isDark ? "#23272b" : "#fff",
+        },
+        headerTitleStyle: {
+          color: isDark ? "#fff" : "#1E90FF",
         },
       }}
     >
@@ -66,15 +77,17 @@ function TabLayoutContent() {
             <Ionicons name="chatbubble-outline" size={size + 2} color={color} />
           ),
         }}
-      />
+      />  
     </Tabs>
   );
 }
 
 export default function TabLayout() {
   return (
-    <AnnouncementsProvider>
-      <TabLayoutContent />
-    </AnnouncementsProvider>
+    <ThemeProvider>
+      <AnnouncementsProvider>
+        <TabLayoutContent />
+      </AnnouncementsProvider>
+    </ThemeProvider>
   );
 }

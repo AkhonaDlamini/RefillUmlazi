@@ -1,10 +1,9 @@
 import { onValue, push, ref, remove, update } from 'firebase/database';
-import React, { useEffect, useState } from 'react';
-import {
-  ActivityIndicator, BackHandler, FlatList, KeyboardAvoidingView, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, useWindowDimensions, View
-} from 'react-native';
+import React, { useEffect, useState, useContext } from 'react';
+import {ActivityIndicator, BackHandler, FlatList, KeyboardAvoidingView, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, useWindowDimensions, View} from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { auth, db } from '../../config/firebaseConfig';
+import { ThemeContext } from '../../context/ThemeContext';
 
 type Chat = {
   id: string;
@@ -18,7 +17,7 @@ type Chat = {
 
 type Reply = {
   userId: string;
-  displayName?: string; // Added to store sender's display name
+  displayName?: string; 
   message: string;
   timestamp: string;
   reactions?: { [userId: string]: string };
@@ -26,12 +25,12 @@ type Reply = {
 };
 
 const reactionIcons = [
-  { name: 'thumbs-up', color: '#1E90FF' },   // Like
-  { name: 'heart', color: '#FF4444' },       // Love
-  { name: 'happy-outline', color: '#FFD700' }, // Haha
-  { name: 'star', color: '#FFD700' },        // Wow
-  { name: 'sad-outline', color: '#6699CC' }, // Sad
-  { name: 'skull-outline', color: '#FF6347' }, // Angry
+  { name: 'thumbs-up', color: '#1E90FF' },   
+  { name: 'heart', color: '#FF4444' },       
+  { name: 'happy-outline', color: '#FFD700' }, 
+  { name: 'star', color: '#FFD700' },        
+  { name: 'sad-outline', color: '#6699CC' }, 
+  { name: 'skull-outline', color: '#FF6347' }, 
 ];
 
 export default function UserChat() {
@@ -48,6 +47,7 @@ export default function UserChat() {
   >(null);
   const [users, setUsers] = useState<{ [uid: string]: { displayName?: string; email?: string } }>({});
   const { width } = useWindowDimensions();
+  const { isDark } = useContext(ThemeContext);
 
   useEffect(() => {
     if (!threadModalChatId) return;
@@ -69,7 +69,6 @@ export default function UserChat() {
     });
   }, []);
 
-  // Fetch users' display names
   useEffect(() => {
     const usersRef = ref(db, 'users');
     return onValue(usersRef, (snapshot) => {
@@ -164,10 +163,10 @@ export default function UserChat() {
 
   const getDisplayName = React.useCallback(
     (userId?: string | null, displayName?: string) => {
-      if (displayName) return displayName; // Use stored displayName if available
+      if (displayName) return displayName; 
       if (!userId) return 'anonymous';
       if (users[userId]?.displayName) return users[userId].displayName;
-      return userId; // Fallback to UID if no display name
+      return userId; 
     },
     [users]
   );
@@ -195,9 +194,7 @@ export default function UserChat() {
 
         const options: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric', year: 'numeric' };
         return date.toLocaleDateString(undefined, options);
-      }
-
-      return (
+      }return (
         <View
           key={replyId}
           style={[
@@ -268,62 +265,64 @@ export default function UserChat() {
       return date.toLocaleDateString(undefined, options);
     }
 
+    const threadUserReaction = getUserReaction(threadChat.reactions);
+
     return (
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={[styles.threadModalContainer, { width }]}>
-        <View style={styles.threadHeader}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={[styles.threadModalContainer, { width, backgroundColor: isDark ? '#181818' : '#fff' }]}>
+        <View style={[styles.threadHeader, {backgroundColor: isDark ? '#23272b' : '#fff', borderBottomColor: isDark ? '#444' : '#eee'}]}>
           <TouchableOpacity onPress={() => { setThreadModalChatId(null); setReplyingToReplyId(null); }} style={styles.backButton}>
             <Ionicons name="arrow-back" size={24} color="#1E90FF" />
           </TouchableOpacity>
-          <Text style={styles.threadHeaderText}>Thread</Text>
+          <Text style={[styles.threadHeaderText, {color: isDark? "#1E90FF" : "#1E90FF"}]}>Thread</Text>
           <View style={{ width: 24 }} />
         </View>
 
         <View style={styles.threadModal}>
           <ScrollView style={{ flex: 1 }}>
-            <View style={styles.reportCard}>
+            <View style={[styles.reportCard, { backgroundColor: isDark ? '#23272b' : '#F0F0F0' }]}>
               <View style={styles.metaRow}>
-                <Text style={styles.metaText}>{getDisplayName(threadChat.userId, threadChat.displayName)}</Text>
-                <Text style={styles.metaText}>{formatTime(threadChat.timestamp)}</Text>
+                <Text style={[styles.metaText, { color: isDark? "#aaa" : "#666"}]}>{getDisplayName(threadChat.userId, threadChat.displayName)}</Text>
+                <Text style={[styles.metaText, { color: isDark? "#aaa" : "#666"}]}>{formatTime(threadChat.timestamp)}</Text>
               </View>
-              <Text style={styles.reportMessage}>{threadChat.message}</Text>
+              <Text style={[styles.reportMessage, { color: isDark ? "#fff" : "#333" }]}>{threadChat.message}</Text>
               <View style={styles.actionRow}>
                 <TouchableOpacity
-                  style={[styles.reactionButton, userReaction && { backgroundColor: '#DCF8C6' }]}
+                  style={[styles.reactionButton, userReaction && { backgroundColor: '#DCF8C6' }, {borderColor: isDark? "#444" : "#ccc"}]}
                   onPress={() => setReactionModalVisible({ type: 'chat', id: threadChat.id, chatId: threadChat.id })}
                 >
-                  <Ionicons name={userReaction || 'thumbs-up'} size={20} color={userReaction ? '#4CAF50' : '#555'} />
-                  <Text style={styles.countText}>{getReactionCount(threadChat.reactions)}</Text>
+                  <Ionicons name={getUserReaction (threadChat.reactions) ? "#4CAF50" : (isDark? "#aaa" : "#555")} size={20} color={threadUserReaction ? '#4CAF50' : '#555'} />
+                  <Text style={[styles.countText, { color: isDark? "#aaa" : "#555"}]}>{getReactionCount(threadChat.reactions)}</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.replyCountButton} onPress={() => {}}>
-                  <Ionicons name="chatbubble-outline" size={20} color="#555" />
-                  <Text style={styles.countText}>{threadChat.replies ? Object.keys(threadChat.replies).length : 0}</Text>
+                <TouchableOpacity style={[styles.replyCountButton, {borderColor: isDark ? "#444" : "#ccc"}]} onPress={() => {}}>
+                  <Ionicons name="chatbubble-outline" size={20} color= {isDark ? "#aaa" : "#555"}/>
+                  <Text style={[styles.countText, { color: isDark ? "#aaa" : "#555" }]}>{threadChat.replies ? Object.keys(threadChat.replies).length : 0}</Text>
                 </TouchableOpacity>
               </View>
             </View>
 
             <View style={{ marginTop: 10 }}>
-              <Text style={{ fontWeight: '600', marginBottom: 6 }}>Replies</Text>
+              <Text style={{ fontWeight: '600', marginBottom: 6, color: isDark ? "#fff" : "#222" }}>Replies</Text>
               {threadChat.replies
                 ? Object.entries(threadChat.replies).map(([rid, r]) =>
                     renderReply(rid, r, threadChat.id, 0)
                   )
-                : <Text style={{ color: '#999', fontStyle: 'italic' }}>No replies yet.</Text>}
+                : <Text style={{ color: isDark ? "#aaa" : "#999", fontStyle: 'italic' }}>No replies yet.</Text>}
             </View>
           </ScrollView>
 
-          <View style={styles.replyInputContainer}>
+          <View style={[styles.replyInputContainer, {backgroundColor: isDark ? '#23272b' : '#fff', borderTopColor: isDark ? '#444' : '#ccc'}]}>
             {replyingToReplyId && (
-              <View style={styles.replyingToIndicator}>
-                <Text style={styles.replyingToText}>Replying to reply</Text>
+              <View style={[styles.replyingToIndicator, {backgroundColor: isDark ? '#23272b' : '#f0f0f0'}]}>
+                <Text style={[styles.replyingToText, { color: isDark ? "#fff" : "#666"}]}>Replying to reply</Text>
                 <TouchableOpacity onPress={() => setReplyingToReplyId(null)}>
-                  <Ionicons name="close" size={16} color="#666" />
+                  <Ionicons name="close" size={16} color={isDark ? "#fff" : "#666"} />
                 </TouchableOpacity>
               </View>
             )}
             <TextInput
-              style={styles.replyInput}
+              style={[styles.replyInput, {color: isDark ? "#fff" : "#000", borderColor: isDark ? "#444" : "#ccc", backgroundColor: isDark ? '#181818' : '#fff'}]}
               placeholder={replyingToReplyId ? "Write your reply to this message..." : "Write your reply..."}
-              placeholderTextColor="#999"
+              placeholderTextColor= {isDark ? "#aaa" : "#999"}
               multiline
               value={replyText}
               onChangeText={setReplyText}
@@ -338,7 +337,7 @@ export default function UserChat() {
         </View>
       </KeyboardAvoidingView>
     );
-  }, [threadChat, replyText, replyingToReplyId, loading, width, renderReply, sendReply, getReactionCount, getUserReaction, getDisplayName]);
+  }, [threadChat, getUserReaction, width, isDark, getDisplayName, getReactionCount, replyingToReplyId, replyText, loading, renderReply, sendReply]);
 
   const ReactionModal = () => {
     if (!reactionModalVisible) return null;
@@ -366,8 +365,8 @@ export default function UserChat() {
     return (
       <Modal transparent animationType="fade" visible={!!reactionModalVisible} onRequestClose={() => setReactionModalVisible(null)}>
         <TouchableOpacity style={styles.reactionModalOverlay} activeOpacity={1} onPress={() => setReactionModalVisible(null)}>
-          <View style={styles.reactionModalContent}>
-            <Text style={styles.reactionModalTitle}>Choose a reaction</Text>
+          <View style={[styles.reactionModalContent, { backgroundColor: isDark ? '#23272b' : '#fff' }]}>
+            <Text style={[styles.reactionModalTitle, {color: isDark? "#fff" : "#222"}]}>Choose a reaction</Text>
             <View style={styles.reactionsRow}>
               {reactionIcons.map(({ name, color }) => (
                 <TouchableOpacity
@@ -389,9 +388,9 @@ export default function UserChat() {
   };
 
   return (
-    <View style={styles.container}>
-      <View style={styles.headerContainer}> {/* New container for consistency */}
-      <Text style={styles.header}>Community Chat</Text>
+    <View style={[styles.container, {backgroundColor: isDark ? '#181818' : '#FFFFFF'}]}>
+      <View style={[styles.headerContainer, {backgroundColor: isDark ? '#181818' : '#FFFFFF'}]}> 
+      <Text style={[styles.header, { color: isDark ? "#1E90FF" : "#1E90FF", backgroundColor: isDark ? "#181818" : "#fff", borderBottomColor: "#1E90FF" }]}>Community Chat</Text>
       
     </View>
       <FlatList
@@ -420,7 +419,7 @@ export default function UserChat() {
 
           return (
             <TouchableOpacity
-              style={styles.reportCard}
+              style={[styles.reportCard, { backgroundColor: isDark ? "#23272b" : "#F0F0F0" }]}
               onPress={() => {
                 setThreadModalChatId(item.id);
                 setReplyText('');
@@ -428,52 +427,71 @@ export default function UserChat() {
               }}
             >
               <View style={styles.metaRow}>
-                <Text style={styles.metaText}>{getDisplayName(item.userId, item.displayName)}</Text>
-                <Text style={styles.metaText}>{formatTime(item.timestamp)}</Text>
+                <Text style={[styles.metaText, { color: isDark ? "#aaa" : "#666" }]}>{getDisplayName(item.userId, item.displayName)}</Text>
+                <Text style={[styles.metaText, { color: isDark ? "#aaa" : "#666" }]}>{formatTime(item.timestamp)}</Text>
               </View>
-              <Text style={styles.reportMessage}>{item.message}</Text>
+              <Text style={[styles.reportMessage, { color: isDark ? "#fff" : "#333" }]}>{item.message}</Text>
               <View style={styles.actionRow}>
                 <TouchableOpacity
-                  style={[styles.reactionButton, userReaction && { backgroundColor: '#DCF8C6' }]}
+                  style={[styles.reactionButton, userReaction && { backgroundColor: '#DCF8C6' }, { borderColor: isDark ? "#444" : "#ccc" }]}
                   onPress={() => setReactionModalVisible({ type: 'chat', id: item.id, chatId: item.id })}
                   onLongPress={() => setReactionModalVisible({ type: 'chat', id: item.id, chatId: item.id })}
                 >
                   <Ionicons
                     name={userReaction || 'thumbs-up-outline'}
                     size={20}
-                    color={userReaction ? reactionIcon.color : '#555'}
+                    color={userReaction ? reactionIcon.color : (isDark ? "#aaa" : "#555")}
                   />
-                  <Text style={styles.countText}>{getReactionCount(item.reactions)}</Text>
+                  <Text style={[styles.countText, { color: isDark ? "#aaa" : "#555" }]}>{getReactionCount(item.reactions)}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  style={styles.replyCountButton}
+                  style={[styles.replyCountButton, { borderColor: isDark ? "#444" : "#ccc" }]}
                   onPress={() => {
                     setThreadModalChatId(item.id);
                     setReplyText('');
                   }}
                 >
-                  <Ionicons name="chatbubble-outline" size={20} color="#555" />
-                  <Text style={styles.countText}>{replyCount}</Text>
+                  <Ionicons name="chatbubble-outline" size={20} color={isDark ? "#aaa" : "#555"} />
+                  <Text style={[styles.countText, { color: isDark ? "#aaa" : "#555" }]}>{replyCount}</Text>
                 </TouchableOpacity>
               </View>
             </TouchableOpacity>
           );
         }}
-        ListEmptyComponent={<View style={{ marginTop: 20 }}><Text style={{ color: '#777', fontStyle: 'italic' }}>No messages yet.</Text></View>}
+        ListEmptyComponent={
+        <View style={{ marginTop: 20 }}>
+          <Text style={{ color: isDark ? "#aaa" : "#777", fontStyle: 'italic' }}>No messages yet.</Text></View>}
       />
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.inputContainer}>
-        <TextInput
-          style={styles.input}
-          placeholder="Type your message..."
-          placeholderTextColor="#999"
-          multiline
-          value={message}
-          onChangeText={setMessage}
-        />
-        <TouchableOpacity onPress={sendMessage} style={styles.sendButton}>
-          <Ionicons name="send" size={24} color="#fff" />
-        </TouchableOpacity>
-      </KeyboardAvoidingView>
+     <KeyboardAvoidingView
+  behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+  style={[
+    styles.inputContainer,
+    {
+      backgroundColor: isDark ? "#1A1A1A" : "#fff",
+      borderTopColor: isDark ? "#333" : "#ccc",
+    },
+  ]}
+>
+  <TextInput
+    style={[
+      styles.input,
+      {
+        color: isDark ? "#fff" : "#000",
+        backgroundColor: isDark ? "#2A2A2A" : "#fff",
+        borderColor: isDark ? "#444" : "#ccc",
+      },
+    ]}
+    placeholder="Type your message..."
+    placeholderTextColor={isDark ? "#999" : "#999"}
+    multiline
+    value={message}
+    onChangeText={setMessage}
+  />
+  <TouchableOpacity onPress={sendMessage} style={styles.sendButton}>
+    <Ionicons name="send" size={24} color="#fff" />
+  </TouchableOpacity>
+</KeyboardAvoidingView>
+
 
       <Modal visible={!!threadModalChatId} animationType="slide" onRequestClose={() => { setThreadModalChatId(null); setReplyingToReplyId(null); }} presentationStyle="pageSheet">
         {MemoThreadModal}
@@ -488,15 +506,16 @@ function getSafeUserId(userId: string): string {
   return userId.replace(/[.#$\[\]]/g, '_');
 }
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FFFFFF' },
+  container: { flex: 1,backgroundColor: "#FFF",},
   headerContainer: {
+    marginTop: 10,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingVertical: 10,
     paddingHorizontal: 15,
     borderBottomWidth: 1,
-    borderBottomColor: '#ddd',
+    borderBottomColor: '#1E90FF',
   },
   header: {
     fontSize: 24,
@@ -504,6 +523,7 @@ const styles = StyleSheet.create({
     color: '#1E90FF',
     flex: 1,
     textAlign: 'center',
+    marginTop: 15,
   },
   helpButton: {
     flexDirection: 'row',

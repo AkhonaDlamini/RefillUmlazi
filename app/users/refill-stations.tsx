@@ -1,8 +1,6 @@
-// RefillStationScreen.tsx
-
 import { Ionicons } from '@expo/vector-icons';
 import { getDatabase, onValue, ref } from 'firebase/database';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useContext } from 'react';
 import {
   FlatList,
   Linking,
@@ -14,8 +12,10 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  Alert,
 } from 'react-native';
 import MapView, { Callout, Marker } from 'react-native-maps';
+import { ThemeContext } from '../../context/ThemeContext';
 
 type RefillStation = {
   id: string;
@@ -34,7 +34,7 @@ export default function RefillStationScreen() {
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [helpVisible, setHelpVisible] = useState(false);
-
+  const { isDark } = useContext(ThemeContext);
   const mapRef = useRef<MapView>(null);
 
   useEffect(() => {
@@ -66,9 +66,7 @@ export default function RefillStationScreen() {
         new Set(
           refillStations
             .map((s) => s.location)
-            .filter((loc) =>
-              loc.toLowerCase().startsWith(searchQuery.toLowerCase())
-            )
+            .filter((loc) => loc.toLowerCase().startsWith(searchQuery.toLowerCase()))
         )
       );
       setSuggestions(matches);
@@ -118,13 +116,32 @@ export default function RefillStationScreen() {
     }
   }, [searchQuery, refillStations]);
 
-  const openDirections = (lat: number, lng: number, label: string) => {
-    const url =
-      Platform.OS === 'ios'
-        ? `http://maps.apple.com/?daddr=${lat},${lng}&q=${encodeURIComponent(label)}`
-        : `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving`;
-    Linking.openURL(url);
-  };
+  const openDirections = async (lat: number, lng: number, label: string) => {
+  try {
+    const latLng = `${lat},${lng}`;
+    const labelEncoded = encodeURIComponent(label);
+
+    let url = '';
+    if (Platform.OS === 'ios') {
+      // Apple Maps
+      url = `http://maps.apple.com/?ll=${latLng}&q=${labelEncoded}`;
+    } else {
+      // Google Maps
+      url = `https://www.google.com/maps/dir/?api=1&destination=${latLng}&travelmode=driving`;
+    }
+
+    const supported = await Linking.canOpenURL(url);
+    if (supported) {
+      await Linking.openURL(url);
+    } else {
+      Alert.alert('No Map App', 'Could not open map. Please check your device.');
+    }
+  } catch (error) {
+    console.error('Navigation error:', error);
+    Alert.alert('Error', 'Failed to open directions.');
+  }
+};
+;
 
   const getStatusColor = (available: boolean) =>
     available
@@ -136,25 +153,22 @@ export default function RefillStationScreen() {
   const getStatusText = (available: boolean) => (available ? 'Available' : 'Unavailable');
 
   return (
-    <View style={styles.container}>
-      <View style={styles.fixedTop}>
+    <View style={[styles.container, { backgroundColor: isDark ? '#181818' : '#fff' }]}>
+      <View style={[styles.fixedTop, { backgroundColor: isDark ? '#181818' : '#fff' }]}>
         <View style={styles.header}>
           <View style={{ width: 32 }} />
-          <Text style={styles.appName}>Refill Stations</Text>
-          <TouchableOpacity
-            style={styles.helpButton}
-            onPress={() => setHelpVisible(true)}
-          >
+          <Text style={[styles.appName, { color: '#1E90FF' }]}>Refill Stations</Text>
+          <TouchableOpacity style={styles.helpButton} onPress={() => setHelpVisible(true)}>
             <Ionicons name="help-circle-outline" size={22} color="#1E90FF" />
             <Text style={styles.helpButtonText}>Help</Text>
           </TouchableOpacity>
         </View>
 
-        <View style={styles.searchContainer}>
+        <View style={[styles.searchContainer, { backgroundColor: isDark ? '#23272b' : '#F1F1F1' }]}>
           <TextInput
-            style={styles.searchInput}
+            style={[styles.searchInput, { color: isDark ? '#fff' : '#333' }]}
             placeholder="Search by section name"
-            placeholderTextColor="#888"
+            placeholderTextColor={isDark ? '#aaa' : '#888'}
             value={searchQuery}
             onChangeText={setSearchQuery}
           />
@@ -165,11 +179,11 @@ export default function RefillStationScreen() {
               setShowSuggestions(false);
             }}
           >
-            <Ionicons name="close-circle" size={26} color="#999" />
+            <Ionicons name="close-circle" size={26} color={isDark ? '#888' : '#999'} />
           </TouchableOpacity>
         </View>
 
-        <View style={styles.mapContainer}>
+        <View style={[styles.mapContainer, { borderColor: isDark ? '#444' : '#ddd' }]}>
           <MapView ref={mapRef} style={styles.map} initialRegion={initialRegion}>
             {refillStations.map((station) => (
               <Marker
@@ -178,13 +192,25 @@ export default function RefillStationScreen() {
                 title={station.location}
                 pinColor={station.waterAvailable ? 'dodgerblue' : 'red'}
               >
-                <Callout>
+                <Callout tooltip={false}>
                   <View style={{ maxWidth: 200 }}>
-                    <Text style={{ fontWeight: 'bold' }}>{station.location}</Text>
-                    <Text>{station.address}</Text>
-                    <Text>Station No: {station.stationNumber}</Text>
-                    <Text>Water: {getStatusText(station.waterAvailable)}</Text>
-                    <Text style={{ fontSize: 11, marginTop: 4 }}>
+                    <Text style={{ fontWeight: 'bold', color: isDark ? '#fff' : '#222' }}>
+                      {station.location}
+                    </Text>
+                    <Text style={{ color: isDark ? '#ccc' : '#222' }}>{station.address}</Text>
+                    <Text style={{ color: isDark ? '#ccc' : '#222' }}>
+                      Station No: {station.stationNumber}
+                    </Text>
+                    <Text style={{ color: isDark ? '#ccc' : '#222' }}>
+                      Water: {getStatusText(station.waterAvailable)}
+                    </Text>
+                    <Text
+                      style={{
+                        fontSize: 11,
+                        marginTop: 4,
+                        color: isDark ? '#aaa' : '#444',
+                      }}
+                    >
                       Last Updated: {formatDate(station.createdAt)}
                     </Text>
                     <TouchableOpacity
@@ -198,9 +224,7 @@ export default function RefillStationScreen() {
                         openDirections(station.latitude, station.longitude, station.location)
                       }
                     >
-                      <Text style={{ color: '#fff', textAlign: 'center' }}>
-                        Get Directions
-                      </Text>
+                      <Text style={{ color: '#fff', textAlign: 'center' }}>Get Directions</Text>
                     </TouchableOpacity>
                   </View>
                 </Callout>
@@ -208,9 +232,18 @@ export default function RefillStationScreen() {
             ))}
           </MapView>
         </View>
+        <View style={styles.recommendedHeader}>
+          <Ionicons name="navigate" size={18} color="#1E90FF" />
+          <Text style={styles.recommendedText}>Recommended Nearby</Text>
+        </View>
 
         {showSuggestions && suggestions.length > 0 && (
-          <View style={styles.suggestionBox}>
+          <View
+            style={[
+              styles.suggestionBox,
+              { backgroundColor: isDark ? '#23272b' : '#fff', borderColor: isDark ? '#444' : '#ddd' },
+            ]}
+          >
             <ScrollView>
               {suggestions.map((s) => (
                 <TouchableOpacity
@@ -218,7 +251,9 @@ export default function RefillStationScreen() {
                   onPress={() => handleSuggestionPress(s)}
                   style={styles.suggestionItem}
                 >
-                  <Text style={styles.suggestionText}>{s}</Text>
+                  <Text style={[styles.suggestionText, { color: isDark ? '#fff' : '#444' }]}>
+                    {s}
+                  </Text>
                 </TouchableOpacity>
               ))}
             </ScrollView>
@@ -234,13 +269,9 @@ export default function RefillStationScreen() {
           const status = getStatusColor(item.waterAvailable);
           return (
             <TouchableOpacity onPress={() => focusMapOnStation(item)}>
-              <View style={styles.stationCard}>
+              <View style={[styles.stationCard, { backgroundColor: isDark ? '#1E1E1E' : '#fff' }]}>
                 <View style={[styles.stationIconContainer, { backgroundColor: status.bgColor }]}>
-                  <Ionicons
-                    name={getStatusIcon(item.waterAvailable)}
-                    size={28}
-                    color={status.color}
-                  />
+                  <Ionicons name={getStatusIcon(item.waterAvailable)} size={28} color={status.color} />
                 </View>
                 <View style={styles.stationDetails}>
                   <View style={styles.stationHeader}>
@@ -250,11 +281,7 @@ export default function RefillStationScreen() {
                   <Text style={styles.stationAddress}>{item.address}</Text>
                   <View style={styles.statusContainer}>
                     <View style={[styles.statusBadge, { backgroundColor: status.bgColor }]}>
-                      <Ionicons
-                        name={getStatusIcon(item.waterAvailable)}
-                        size={16}
-                        color={status.color}
-                      />
+                      <Ionicons name={getStatusIcon(item.waterAvailable)} size={16} color={status.color} />
                       <Text style={[styles.statusText, { color: status.color }]}>
                         {getStatusText(item.waterAvailable)}
                       </Text>
@@ -271,9 +298,7 @@ export default function RefillStationScreen() {
         }}
         showsVerticalScrollIndicator={false}
         ListEmptyComponent={
-          <Text style={styles.noResultsText}>
-            No refill stations found for {searchQuery}
-          </Text>
+          <Text style={styles.noResultsText}>No refill stations found for {searchQuery}</Text>
         }
       />
 
@@ -285,13 +310,11 @@ export default function RefillStationScreen() {
         onRequestClose={() => setHelpVisible(false)}
       >
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContainer}>
+          <View style={[styles.modalContainer, { backgroundColor: isDark ? '#23272b' : '#fff' }]}>
             <Text style={styles.modalTitle}>Help</Text>
-            <Text style={[styles.modalText, { marginBottom: 20 }]}>
+            <Text style={[styles.modalText, { color: isDark ? '#fff' : '#444' }, { marginBottom: 20 }]}>
               This screen shows a searchable map and list of water refill stations in Umlazi.
-            </Text>
-            <Text>Tap on any station card to focus on its location on the map.</Text>
-            <Text>
+              Tap on any station card to focus on its location on the map.
               Markers show the station location. Colored badges indicate water status: green =
               available, red = unavailable.
             </Text>
@@ -311,27 +334,40 @@ export default function RefillStationScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#F7F7F7',
   },
   fixedTop: {
     position: 'absolute',
-    top: Platform.OS === 'ios' ? 40 : 20,
+    top: Platform.OS === 'ios' ? 0 : 20,
     left: 0,
     right: 0,
     zIndex: 10,
     paddingHorizontal: 15,
-    backgroundColor: '#fff',
-    paddingBottom: 10,
   },
   header: {
+    marginTop: 10,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingVertical: 10,
     marginBottom: 10,
-    borderBottomColor: '#ddd',
+    borderBottomColor: '#1E90FF',
     borderBottomWidth: 1,
   },
+  recommendedHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 5,
+    marginHorizontal: 15,
+    gap: 6,
+  },
+
+  recommendedText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1E90FF',
+  },
+
   appName: {
     fontSize: 24,
     fontWeight: 'bold',
@@ -352,7 +388,7 @@ const styles = StyleSheet.create({
   searchContainer: {
     flexDirection: 'row',
     marginHorizontal: 0,
-    marginBottom: 5,
+    marginBottom: 10,
     backgroundColor: '#F1F1F1',
     borderRadius: 8,
     alignItems: 'center',
@@ -523,7 +559,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     textAlign: 'center',
   },
-  
+
   suggestionItem: {
     backgroundColor: '#fff',
     borderBottomColor: '#eee',

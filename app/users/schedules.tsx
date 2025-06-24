@@ -2,51 +2,39 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import { useRouter } from "expo-router";
 import { getAuth, signOut, updateProfile } from "firebase/auth";
 import { onValue, ref, update } from "firebase/database";
-import React, { useEffect, useState } from "react";
-import {
-  Alert,
-  FlatList,
-  Modal,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import React, { useEffect, useState, useContext } from "react";
+import {Alert,FlatList,Modal,StyleSheet,Switch,Text,TextInput,TouchableOpacity,View} from "react-native";
 import { db } from "../../config/firebaseConfig";
+import { ThemeContext } from "../../context/ThemeContext";
 
 interface Schedule {
   id: string;
   location: string;
-  day: string; 
-  date: string; 
+  day: string;
+  date: string;
   startTime: string;
   endTime: string;
 }
 
 export default function DashboardScreen() {
   const [allSchedules, setAllSchedules] = useState<Schedule[]>([]);
-  const [groupedSchedules, setGroupedSchedules] = useState<
-    Record<string, Schedule[]>
-  >({});
+  const [groupedSchedules, setGroupedSchedules] = useState<Record<string, Schedule[]>>({});
   const [selectedLocation, setSelectedLocation] = useState<string | null>(null);
   const [profileModalVisible, setProfileModalVisible] = useState(false);
   const [editingName, setEditingName] = useState("");
   const [saving, setSaving] = useState(false);
-
+  const { isDark, toggleTheme } = useContext(ThemeContext);
   const auth = getAuth();
   const router = useRouter();
   const uid = auth.currentUser?.uid;
 
   useEffect(() => {
     if (!uid) return;
-
     const selectedLocationRef = ref(db, `users/${uid}/selectedLocation`);
     const unsubscribeSelected = onValue(selectedLocationRef, (snapshot) => {
       const loc = snapshot.val();
       setSelectedLocation(loc || null);
     });
-
     return () => unsubscribeSelected();
   }, [uid]);
 
@@ -64,7 +52,6 @@ export default function DashboardScreen() {
         setAllSchedules([]);
       }
     });
-
     return () => unsubscribeSchedules();
   }, []);
 
@@ -73,19 +60,16 @@ export default function DashboardScreen() {
       setGroupedSchedules({});
       return;
     }
-
     const filtered = allSchedules.filter(
       (schedule) =>
         schedule.location.toLowerCase().trim() === selectedLocation.toLowerCase().trim()
     );
-
     const grouped = filtered.reduce((acc, schedule) => {
       const date = schedule.date;
       if (!acc[date]) acc[date] = [];
       acc[date].push(schedule);
       return acc;
     }, {} as Record<string, Schedule[]>);
-
     setGroupedSchedules(grouped);
   }, [selectedLocation, allSchedules]);
 
@@ -142,14 +126,10 @@ export default function DashboardScreen() {
   };
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <View style={{ width: 32 }} /> 
-        <Text style={styles.appName}>Refill Umlazi</Text>
-        <TouchableOpacity
-          style={styles.helpButton}
-          onPress={handleOpenProfileModal} 
-        >
+    <View style={[styles.container, { backgroundColor: isDark ? "#121212" : "#FFFFFF" }]}>
+      <View style={styles.headerContainer}>
+        <Text style={styles.header}>Refill Umlazi</Text>
+        <TouchableOpacity style={styles.helpButton} onPress={handleOpenProfileModal}>
           <Ionicons name="person-circle-outline" size={30} color="#1E90FF" />
         </TouchableOpacity>
       </View>
@@ -161,62 +141,74 @@ export default function DashboardScreen() {
         onRequestClose={() => setProfileModalVisible(false)}
       >
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Profile</Text>
+          <View style={[styles.modalContent, { backgroundColor: isDark ? "#222" : "#fff" }]}>
+            <Text style={[styles.modalTitle, { color: "#1E90FF" }]}>Profile</Text>
             <View style={styles.profileInfo}>
-              <Text style={styles.label}>Email</Text>
-              <Text style={styles.value}>{auth.currentUser?.email || "N/A"}</Text>
-              <Text style={styles.label}>Display Name</Text>
+              <Text style={[styles.label, { color: isDark ? "#fff" : "#333" }]}>Email</Text>
+              <Text style={[styles.value, { color: isDark ? "#ccc" : "#666" }]}>
+                {auth.currentUser?.email || "N/A"}
+              </Text>
+
+              <Text style={[styles.label, { color: isDark ? "#fff" : "#333" }]}>Display Name</Text>
               <TextInput
                 value={editingName}
                 onChangeText={setEditingName}
-                style={styles.input}
+                style={[
+                  styles.input,
+                  {
+                    color: isDark ? "#fff" : "#000",
+                    borderColor: isDark ? "#444" : "#ccc",
+                    backgroundColor: isDark ? "#181818" : "#fff",
+                  },
+                ]}
                 placeholder="Enter display name"
-                placeholderTextColor="#888"
+                placeholderTextColor={isDark ? "#aaa" : "#888"}
               />
-              <Text style={styles.label}>Selected Location</Text>
-              <Text style={styles.value}>{selectedLocation || "None"}</Text>
+
+              <Text style={[styles.label, { color: isDark ? "#fff" : "#333" }]}>Selected Location</Text>
+              <Text style={[styles.value, { color: isDark ? "#ccc" : "#666" }]}>
+                {selectedLocation || "None"}
+              </Text>
+
+              {/* Dark Mode Toggle */}
+              <View style={styles.option}>
+                <Text style={[styles.label, { color: isDark ? "#fff" : "#000" }]}>Dark Mode</Text>
+                <Switch value={isDark} onValueChange={toggleTheme} />
+              </View>
             </View>
+
             <TouchableOpacity
               style={[styles.button, styles.saveButton]}
               onPress={handleSaveName}
               disabled={saving}
             >
-              <Text style={styles.buttonText}>
-                {saving ? "Saving..." : "Save Name"}
-              </Text>
+              <Text style={styles.buttonText}>{saving ? "Saving..." : "Save Name"}</Text>
             </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.button, styles.logoutButton]}
-              onPress={handleLogout}
-            >
+            <TouchableOpacity style={[styles.button, styles.logoutButton]} onPress={handleLogout}>
               <Text style={styles.buttonText}>Logout</Text>
             </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.cancelButton}
-              onPress={() => setProfileModalVisible(false)}
-            >
+            <TouchableOpacity style={styles.cancelButton} onPress={() => setProfileModalVisible(false)}>
               <Text style={styles.cancelText}>Cancel</Text>
             </TouchableOpacity>
           </View>
         </View>
       </Modal>
 
-      <Text style={styles.subText}>
-        {selectedLocation
-          ? `Showing schedules for: ${selectedLocation}`
-          : "No location selected."}
+      <Text style={[styles.subText, { color: isDark ? "#ccc" : "#333" }]}>
+        {selectedLocation ? `Showing schedules for: ${selectedLocation}` : "No location selected."}
       </Text>
 
       {sortedDates.length === 0 ? (
-        <Text style={styles.emptyText}>No schedules for this location.</Text>
+        <Text style={[styles.emptyText, { color: isDark ? "#888" : "gray" }]}>
+          No schedules for this location.
+        </Text>
       ) : (
         <FlatList
           data={sortedDates}
           keyExtractor={(date) => date}
           renderItem={({ item: date }) => (
-            <View style={styles.card}>
-              <Text style={styles.cardTitle}>{formatDateHeader(date)}</Text>
+            <View style={[styles.card, { backgroundColor: isDark ? "#23272b" : "#F8F9FA" }]}>
+              <Text style={[styles.cardTitle, { color: "#1E90FF" }]}>{formatDateHeader(date)}</Text>
               {groupedSchedules[date].map((schedule, index) => (
                 <View
                   key={schedule.id}
@@ -225,10 +217,10 @@ export default function DashboardScreen() {
                     index === groupedSchedules[date].length - 1 && styles.lastTimeSlot,
                   ]}
                 >
-                  <Text style={styles.scheduleTime}>
+                  <Text style={[styles.scheduleTime, { color: isDark ? "#fff" : "#333" }]}>
                     {schedule.startTime} - {schedule.endTime}
                   </Text>
-                  <Text style={styles.scheduleSection}>
+                  <Text style={[styles.scheduleSection, { color: isDark ? "#aaa" : "gray" }]}>
                     Section {schedule.location}
                   </Text>
                 </View>
@@ -242,32 +234,30 @@ export default function DashboardScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#FFFFFF", padding: 10 },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+  container: { flex: 1, backgroundColor: "#FFF" },
+  headerContainer: {
+    marginTop: 10,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     paddingVertical: 10,
     paddingHorizontal: 15,
     borderBottomWidth: 1,
-    borderBottomColor: '#ddd',
+    borderBottomColor: "#1E90FF",
   },
-  appName: {
+  header: {
     fontSize: 24,
-    fontWeight: 'bold',
-    color: '#1E90FF',
-    textAlign: 'center',
-    flex: 1, 
+    fontWeight: "bold",
+    color: "#1E90FF",
+    flex: 1,
+    textAlign: "center",
+    marginTop: 15,
   },
   helpButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 4,
     padding: 4,
-  },
-  profileIcon: {
-    paddingRight: 15,
-    marginLeft: 15,
   },
   subText: {
     fontSize: 16,
@@ -362,6 +352,12 @@ const styles = StyleSheet.create({
     width: "100%",
     marginBottom: 8,
     color: "#000",
+  },
+  option: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginTop: 10,
   },
   button: {
     borderRadius: 8,
