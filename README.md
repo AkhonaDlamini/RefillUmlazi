@@ -17,6 +17,7 @@ Follow these steps to run the app locally.
 ### 1. Clone the Repository
 
 git clone https://github.com/your-username/refillumlazi.git
+
 cd refillumlazi
 
 ---
