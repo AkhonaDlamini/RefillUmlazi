@@ -33,6 +33,7 @@ Use Expo Go (iOS/Android), an emulator, or a development build to test the app.
 
 # 📦 Project Structure
 
+```text
 refillumlazi/
 │
 ├── app/                # Main screens and navigation
@@ -42,6 +43,7 @@ refillumlazi/
 ├── App.tsx             # Entry point
 ├── app.json            # Expo config
 └── README.md
+```
 
 # ✨ Key Features
 
@@ -82,10 +84,10 @@ refillumlazi/
 - Monitor push notifications
 
 # 📚 Learn More
-[Expo Docs](https://docs.expo.dev/)
-[Firebase Realtime Database](https://firebase.google.com/docs/database)
-[Push Notifications](https://firebase.google.com/docs/cloud-messaging)
-[React Native Maps](https://docs.expo.dev/versions/latest/sdk/map-view/)
+- [Expo Docs](https://docs.expo.dev/)
+- [Firebase Realtime Database](https://firebase.google.com/docs/database)
+- [Push Notifications](https://firebase.google.com/docs/cloud-messaging)
+- [React Native Maps](https://docs.expo.dev/versions/latest/sdk/map-view/)
 
 # 👩🏽‍💻 Author
 Tech Nomads
