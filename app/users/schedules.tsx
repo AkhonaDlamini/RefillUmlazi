@@ -3,15 +3,25 @@ import { useRouter } from "expo-router";
 import { getAuth, signOut, updateProfile } from "firebase/auth";
 import { onValue, ref, update } from "firebase/database";
 import React, { useEffect, useState, useContext } from "react";
-import {Alert,FlatList,Modal,StyleSheet,Switch,Text,TextInput,TouchableOpacity,View} from "react-native";
+import {
+  Alert,
+  FlatList,
+  Modal,
+  StyleSheet,
+  Switch,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import { db } from "../../config/firebaseConfig";
 import { ThemeContext } from "../../context/ThemeContext";
 
 interface Schedule {
   id: string;
-  location: string;
+  location: string; // e.g., section name or station ID
   day: string;
-  date: string;
+  date: string; // YYYY-MM-DD
   startTime: string;
   endTime: string;
   reason?: string;
@@ -31,29 +41,20 @@ export default function DashboardScreen() {
 
   useEffect(() => {
     if (!uid) return;
-    const selectedLocationRef = ref(db, `users/${uid}/selectedLocation`);
-    const unsubscribeSelected = onValue(selectedLocationRef, (snapshot) => {
-      const loc = snapshot.val();
-      setSelectedLocation(loc || null);
-    });
-    return () => unsubscribeSelected();
+    const selRef = ref(db, `users/${uid}/selectedLocation`);
+    return onValue(selRef, (snap) => setSelectedLocation(snap.val() || null));
   }, [uid]);
 
   useEffect(() => {
-    const schedulesRef = ref(db, "admin/schedules");
-    const unsubscribeSchedules = onValue(schedulesRef, (snapshot) => {
-      const data = snapshot.val();
-      if (data) {
-        const loaded: Schedule[] = Object.entries(data).map(([id, value]: any) => ({
-          id,
-          ...value,
-        }));
-        setAllSchedules(loaded);
-      } else {
-        setAllSchedules([]);
-      }
+    const schedRef = ref(db, "admin/schedules");
+    return onValue(schedRef, (snap) => {
+      const data = snap.val() || {};
+      const list = Object.entries(data).map(([id, val]: any) => ({
+        id,
+        ...val,
+      }));
+      setAllSchedules(list);
     });
-    return () => unsubscribeSchedules();
   }, []);
 
   useEffect(() => {
@@ -62,28 +63,33 @@ export default function DashboardScreen() {
       return;
     }
     const filtered = allSchedules.filter(
-      (schedule) =>
-        schedule.location.toLowerCase().trim() === selectedLocation.toLowerCase().trim()
+      (s) => s.location.trim().toLowerCase() === selectedLocation.trim().toLowerCase()
     );
-    const grouped = filtered.reduce((acc, schedule) => {
-      const date = schedule.date;
-      if (!acc[date]) acc[date] = [];
-      acc[date].push(schedule);
-      return acc;
-    }, {} as Record<string, Schedule[]>);
+    const grouped: Record<string, Schedule[]> = {};
+    filtered.forEach((sch) => {
+      if (!grouped[sch.date]) grouped[sch.date] = [];
+      grouped[sch.date].push(sch);
+    });
     setGroupedSchedules(grouped);
   }, [selectedLocation, allSchedules]);
 
-  const sortedDates = Object.keys(groupedSchedules).sort((a, b) => a.localeCompare(b));
+  const sortedDates = Object.keys(groupedSchedules)
+    .filter((date) => {
+      const t = new Date(date);
+      const n = new Date();
+      t.setHours(0, 0, 0, 0);
+      n.setHours(0, 0, 0, 0);
+      return t >= n;
+    })
+    .sort((a, b) => new Date(a).getTime() - new Date(b).getTime());
 
   const formatDateHeader = (dateString: string) => {
-    const dateObj = new Date(dateString);
-    const options: Intl.DateTimeFormatOptions = {
+    const d = new Date(dateString);
+    return d.toLocaleDateString("en-ZA", {
       weekday: "long",
       day: "numeric",
       month: "long",
-    };
-    return dateObj.toLocaleDateString("en-ZA", options);
+    });
   };
 
   const handleOpenProfileModal = () => {
@@ -127,7 +133,7 @@ export default function DashboardScreen() {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: isDark ? "#121212" : "#FFFFFF" }]}>
+    <View style={[styles.container, { backgroundColor: isDark ? "#121212" : "#FFF" }]}>
       <View style={styles.headerContainer}>
         <Text style={styles.header}>Refill Umlazi</Text>
         <TouchableOpacity style={styles.helpButton} onPress={handleOpenProfileModal}>
@@ -188,7 +194,10 @@ export default function DashboardScreen() {
             <TouchableOpacity style={[styles.button, styles.logoutButton]} onPress={handleLogout}>
               <Text style={styles.buttonText}>Logout</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.cancelButton} onPress={() => setProfileModalVisible(false)}>
+            <TouchableOpacity
+              style={styles.cancelButton}
+              onPress={() => setProfileModalVisible(false)}
+            >
               <Text style={styles.cancelText}>Cancel</Text>
             </TouchableOpacity>
           </View>
@@ -201,40 +210,61 @@ export default function DashboardScreen() {
 
       {sortedDates.length === 0 ? (
         <Text style={[styles.emptyText, { color: isDark ? "#888" : "gray" }]}>
-          No schedules for this location.
+          No upcoming schedules.
         </Text>
       ) : (
         <FlatList
           data={sortedDates}
-          keyExtractor={(date) => date}
-          renderItem={({ item: date }) => (
-            <View style={[styles.card, { backgroundColor: isDark ? "#23272b" : "#F8F9FA" }]}>
-              <Text style={[styles.cardTitle, { color: "#1E90FF" }]}>{formatDateHeader(date)}</Text>
-              {groupedSchedules[date].map((schedule, index) => (
-                <View
-                  key={schedule.id}
-                  style={[
-                    styles.timeSlot,
-                    index === groupedSchedules[date].length - 1 && styles.lastTimeSlot,
-                  ]}
-                >
-                  <Text style={[styles.scheduleTime, { color: isDark ? "#fff" : "#333" }]}>
-                    {schedule.startTime} - {schedule.endTime}
-                  </Text>
-                  <Text style={[styles.scheduleSection, { color: isDark ? "#aaa" : "gray" }]}>
-                    Section {schedule.location}
-                  </Text>
-                  {schedule.reason && (
-                    <View style={[styles.reasonBadge, { backgroundColor: isDark ? "#444" : "#E0F7FA" }]}>
-                      <Text style={[styles.reasonText, { color: isDark ? "#fff" : "#007B8A" }]}>
-                        {schedule.reason}
+          keyExtractor={(d) => d}
+          renderItem={({ item: date }) => {
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const target = new Date(date);
+            target.setHours(0, 0, 0, 0);
+            const diff = (target.getTime() - today.getTime()) / (1000 * 3600 * 24);
+            let badgeText = formatDateHeader(date),
+              badgeColor = "#888";
+            if (diff === 0) {
+              badgeText = "Today";
+              badgeColor = "#1E90FF";
+            } else if (diff === 1) {
+              badgeText = "Tomorrow";
+              badgeColor = "#FF6347";
+            }
+
+            return (
+              <View style={{ marginVertical: 8, paddingHorizontal: 16 }}>
+                {groupedSchedules[date].map((sch) => (
+                  <View
+                    key={sch.id}
+                    style={[
+                      styles.outageCard,
+                      { backgroundColor: isDark ? "#1e1e1e" : "#F9FAFB" },
+                    ]}
+                  >
+                    <View style={styles.cardHeaderRow}>
+                      <Text style={[styles.outageTitle, { color: isDark ? "#FFF" : "#000" }]}>
+                        {sch.location}
                       </Text>
+                      <View style={[styles.badge, { backgroundColor: badgeColor }]}>
+                        <Text style={styles.badgeText}>{badgeText}</Text>
+                      </View>
                     </View>
-                  )}  
-                </View>
-              ))}
-            </View>
-          )}
+
+                    <Text style={[styles.outageLabel, { color: isDark ? "#aaa" : "#333" }]}>Time:</Text>
+                    <Text style={[styles.outageText, { color: isDark ? "#ccc" : "#666" }]}>
+                      {sch.startTime} — {sch.endTime}
+                    </Text>
+
+                    <Text style={[styles.outageLabel, { color: isDark ? "#aaa" : "#333" }]}>Reason:</Text>
+                    <Text style={[styles.outageText, { color: isDark ? "#ccc" : "#666" }]}>
+                      {sch.reason || "N/A"}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            );
+          }}
         />
       )}
     </View>
@@ -279,44 +309,6 @@ const styles = StyleSheet.create({
     color: "gray",
     textAlign: "center",
     marginTop: 30,
-  },
-  card: {
-    backgroundColor: "#F8F9FA",
-    borderRadius: 10,
-    padding: 15,
-    marginVertical: 10,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  cardTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#1E90FF",
-    marginBottom: 8,
-  },
-  timeSlot: {
-    marginBottom: 10,
-    paddingBottom: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: "#E0E0E0",
-  },
-  lastTimeSlot: {
-    borderBottomWidth: 0,
-    marginBottom: 0,
-    paddingBottom: 0,
-  },
-  scheduleTime: {
-    fontSize: 16,
-    fontWeight: "bold",
-    color: "#333",
-  },
-  scheduleSection: {
-    fontSize: 14,
-    color: "gray",
-    marginTop: 2,
   },
   modalOverlay: {
     flex: 1,
@@ -393,16 +385,43 @@ const styles = StyleSheet.create({
     color: "#1E90FF",
     fontSize: 14,
   },
-  reasonBadge: {
-    alignSelf: "flex-start",
-    paddingVertical: 4,
-    paddingHorizontal: 8,
+  outageCard: {
+    backgroundColor: "#F9FAFB",
+    padding: 15,
     borderRadius: 12,
-    marginTop: 4,
+    marginBottom: 12,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
   },
-  reasonText: {
+  cardHeaderRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 10,
+  },
+  outageTitle: {
+    fontSize: 16,
+    fontWeight: "bold",
+  },
+  badge: {
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    borderRadius: 10,
+  },
+  badgeText: {
+    color: "#fff",
     fontSize: 12,
     fontWeight: "600",
-    textTransform: "capitalize",
+  },
+  outageLabel: {
+    fontWeight: "600",
+    marginTop: 5,
+  },
+  outageText: {
+    fontSize: 14,
+    lineHeight: 20,
   },
 });
