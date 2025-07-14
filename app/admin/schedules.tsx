@@ -1,19 +1,10 @@
 import { Ionicons } from "@expo/vector-icons";
 import { onValue, push, ref, remove, update } from "firebase/database";
 import React, { useEffect, useState } from "react";
-import {
-  Alert,
-  FlatList,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import { Alert, FlatList, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import DateTimePickerModal from "react-native-modal-datetime-picker";
 import { db } from "../../config/firebaseConfig";
 import { Picker } from "@react-native-picker/picker";
-
 interface Schedule {
   id: string;
   location: string;
@@ -21,6 +12,7 @@ interface Schedule {
   date: string;
   startTime: string;
   endTime: string;
+  reason: string;
 }
 
 export default function AdminSchedules() {
@@ -32,6 +24,7 @@ export default function AdminSchedules() {
   const [startTime, setStartTime] = useState("");
   const [endTime, setEndTime] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [reason, setReason] = useState("");
 
   useEffect(() => {
     const schedulesRef = ref(db, "admin/schedules");
@@ -68,6 +61,7 @@ export default function AdminSchedules() {
     setStartTime("");
     setEndTime("");
     setEditingId(null);
+    setReason("");
   };
 
   const addOrUpdateSchedule = () => {
@@ -94,6 +88,7 @@ export default function AdminSchedules() {
       date: formattedDate,
       startTime,
       endTime,
+      reason,
     };
 
     if (editingId) {
@@ -115,6 +110,7 @@ export default function AdminSchedules() {
     setEndTime(schedule.endTime);
     setEditingId(schedule.id);
     setSelectedDate(new Date(schedule.date));
+    setReason(schedule.reason);
   };
 
   const showDatePicker = () => setDatePickerVisibility(true);
@@ -126,6 +122,24 @@ export default function AdminSchedules() {
     setSelectedDay(date.toLocaleDateString("en-US", options));
     hideDatePicker();
   };
+
+  const getReasonTagStyle = (reason: string) => {
+  const lower = reason.toLowerCase();
+
+  if (lower.includes("maintenance")) {
+    return { backgroundColor: "#FFD700", color: "#000" }; // Yellow
+  } else if (lower.includes("burst") || lower.includes("pipe")) {
+    return { backgroundColor: "#FF4C4C", color: "#fff" }; // Red
+  } else if (lower.includes("inspection")) {
+    return { backgroundColor: "#4B39EF", color: "#fff" }; // Blue
+  } else if (lower.includes("upgrade")) {
+    return { backgroundColor: "#32CD32", color: "#fff" }; // Green
+  } else if (lower.includes("emergency")) {
+    return { backgroundColor: "#8B0000", color: "#fff" }; // Dark Red
+  } else {
+    return { backgroundColor: "#ccc", color: "#333" }; // Default Gray
+  }
+};
 
   return (
     <View style={styles.container}>
@@ -141,7 +155,7 @@ export default function AdminSchedules() {
             style={styles.picker}
             dropdownIconColor="#1E90FF"
           >
-            <Picker.Item label="Select Location" value="" />
+            <Picker.Item label="Select Affected Area" value="" />
             <Picker.Item label="Umlazi A" value="Umlazi A" />
             <Picker.Item label="Umlazi B" value="Umlazi B" />
             <Picker.Item label="Umlazi C" value="Umlazi C" />
@@ -193,11 +207,19 @@ export default function AdminSchedules() {
           onChangeText={setStartTime}
           style={styles.input}
         />
+
         <TextInput
           placeholder="End Time (HH:MM)"
           value={endTime}
           onChangeText={setEndTime}
           style={styles.input}
+        />
+
+        <TextInput
+        placeholder="Reason"
+        value={reason}
+        onChangeText={setReason}
+        style={styles.input}
         />
 
         <TouchableOpacity style={styles.addButton} onPress={addOrUpdateSchedule}>
@@ -221,6 +243,22 @@ export default function AdminSchedules() {
                 <Text style={styles.scheduleText}>
                   {item.date} | {item.startTime} to {item.endTime}
                 </Text>
+                {item.reason ? (
+  <View
+    style={[
+      styles.reasonTag,
+      getReasonTagStyle(item.reason)
+    ]}
+  >
+    <Text style={styles.reasonTagText}>
+      {item.reason}
+    </Text>
+  </View>
+) : (
+  <Text style={{ color: "#999", fontStyle: "italic" }}>
+    Reason: Not provided
+  </Text>
+)}
               </View>
               <View style={styles.cardActions}>
                 <TouchableOpacity onPress={() => editSchedule(item)}>
@@ -325,4 +363,16 @@ const styles = StyleSheet.create({
     marginLeft: 10,
     gap: 10,
   },
+  reasonTag: {
+  alignSelf: "flex-start",
+  paddingVertical: 4,
+  paddingHorizontal: 8,
+  borderRadius: 4,
+  marginTop: 6,
+},
+reasonTagText: {
+  fontSize: 13,
+  fontWeight: "600",
+},
+
 });

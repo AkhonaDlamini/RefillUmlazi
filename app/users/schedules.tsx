@@ -14,6 +14,7 @@ interface Schedule {
   date: string;
   startTime: string;
   endTime: string;
+  reason?: string;
 }
 
 export default function DashboardScreen() {
@@ -223,6 +224,13 @@ export default function DashboardScreen() {
                   <Text style={[styles.scheduleSection, { color: isDark ? "#aaa" : "gray" }]}>
                     Section {schedule.location}
                   </Text>
+                  {schedule.reason && (
+                    <View style={[styles.reasonBadge, { backgroundColor: isDark ? "#444" : "#E0F7FA" }]}>
+                      <Text style={[styles.reasonText, { color: isDark ? "#fff" : "#007B8A" }]}>
+                        {schedule.reason}
+                      </Text>
+                    </View>
+                  )}  
                 </View>
               ))}
             </View>
@@ -384,5 +392,17 @@ const styles = StyleSheet.create({
   cancelText: {
     color: "#1E90FF",
     fontSize: 14,
+  },
+  reasonBadge: {
+    alignSelf: "flex-start",
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: 12,
+    marginTop: 4,
+  },
+  reasonText: {
+    fontSize: 12,
+    fontWeight: "600",
+    textTransform: "capitalize",
   },
 });
