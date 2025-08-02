@@ -34,6 +34,7 @@ export default function DashboardScreen() {
   const [profileModalVisible, setProfileModalVisible] = useState(false);
   const [editingName, setEditingName] = useState("");
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const { isDark, toggleTheme } = useContext(ThemeContext);
   const auth = getAuth();
   const router = useRouter();
@@ -41,20 +42,40 @@ export default function DashboardScreen() {
 
   useEffect(() => {
     if (!uid) return;
-    const selRef = ref(db, `users/${uid}/selectedLocation`);
-    return onValue(selRef, (snap) => setSelectedLocation(snap.val() || null));
+    try {
+      const selRef = ref(db, `users/${uid}/selectedLocation`);
+      return onValue(selRef, (snap) => setSelectedLocation(snap.val() || null), (err) => {
+        console.error(err);
+        setError("Could not load selected location. Please try again later.");
+        Alert.alert("Error", "Could not load selected location. Please try again later.");
+      });
+    } catch (e) {
+      console.error(e);
+      setError("Could not load selected location. Please try again later.");
+      Alert.alert("Error", "Could not load selected location. Please try again later.");
+    }
   }, [uid]);
 
   useEffect(() => {
-    const schedRef = ref(db, "admin/schedules");
-    return onValue(schedRef, (snap) => {
-      const data = snap.val() || {};
-      const list = Object.entries(data).map(([id, val]: any) => ({
-        id,
-        ...val,
-      }));
-      setAllSchedules(list);
-    });
+    try {
+      const schedRef = ref(db, "admin/schedules");
+      return onValue(schedRef, (snap) => {
+        const data = snap.val() || {};
+        const list = Object.entries(data).map(([id, val]: any) => ({
+          id,
+          ...val,
+        }));
+        setAllSchedules(list);
+      }, (err) => {
+        console.error(err);
+        setError("Could not load schedules. Please try again later.");
+        Alert.alert("Error", "Could not load schedules. Please try again later.");
+      });
+    } catch (e) {
+      console.error(e);
+      setError("Could not load schedules. Please try again later.");
+      Alert.alert("Error", "Could not load schedules. Please try again later.");
+    }
   }, []);
 
   useEffect(() => {
@@ -116,6 +137,7 @@ export default function DashboardScreen() {
       setProfileModalVisible(false);
     } catch (e) {
       console.error("Error updating display name:", e);
+      setError("Could not update display name. Please try again.");
       Alert.alert("Error", "Could not update display name. Please try again.");
     } finally {
       setSaving(false);
@@ -128,6 +150,7 @@ export default function DashboardScreen() {
       router.replace("/auth/login");
     } catch (e) {
       console.error("Error logging out:", e);
+      setError("Could not log out. Please try again.");
       Alert.alert("Error", "Could not log out. Please try again.");
     }
   };
@@ -265,6 +288,11 @@ export default function DashboardScreen() {
             );
           }}
         />
+      )}
+      {error && (
+        <View style={{ padding: 10 }}>
+          <Text style={{ color: 'red', textAlign: 'center' }}>{error}</Text>
+        </View>
       )}
     </View>
   );

@@ -1,6 +1,6 @@
 import { onValue, push, ref, remove, update } from 'firebase/database';
-import React, { useEffect, useState, useContext } from 'react';
-import {ActivityIndicator, BackHandler, FlatList, KeyboardAvoidingView, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, useWindowDimensions, View} from 'react-native';
+import React, { useContext, useEffect, useState } from 'react';
+import { ActivityIndicator, Alert, BackHandler, FlatList, KeyboardAvoidingView, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, useWindowDimensions, View } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { auth, db } from '../../config/firebaseConfig';
 import { ThemeContext } from '../../context/ThemeContext';
@@ -46,6 +46,7 @@ export default function UserChat() {
     | null
   >(null);
   const [users, setUsers] = useState<{ [uid: string]: { displayName?: string; email?: string } }>({});
+  const [error, setError] = useState<string | null>(null);
   const { width } = useWindowDimensions();
   const { isDark } = useContext(ThemeContext);
 
@@ -61,30 +62,46 @@ export default function UserChat() {
   }, [threadModalChatId]);
 
   useEffect(() => {
-    const chatRef = ref(db, 'chats');
-    return onValue(chatRef, (snapshot) => {
-      const data = snapshot.val() || {};
-      const parsed = Object.entries(data).map(([id, value]) => ({ id, ...(value as Omit<Chat, 'id'>) }));
-      setChats(parsed.reverse());
-    });
+    try {
+      const chatRef = ref(db, 'chats');
+      return onValue(chatRef, (snapshot) => {
+        const data = snapshot.val() || {};
+        const parsed = Object.entries(data).map(([id, value]) => ({ id, ...(value as Omit<Chat, 'id'>) }));
+        setChats(parsed.reverse());
+      });
+    } catch (e) {
+      console.error(e);
+      setError("Could not load chats. Please try again later.");
+    }
   }, []);
 
   useEffect(() => {
-    const usersRef = ref(db, 'users');
-    return onValue(usersRef, (snapshot) => {
-      setUsers(snapshot.val() || {});
-    });
+    try {
+      const usersRef = ref(db, 'users');
+      return onValue(usersRef, (snapshot) => {
+        setUsers(snapshot.val() || {});
+      });
+    } catch (e) {
+      console.error(e);
+      setError("Could not load users. Please try again later.");
+    }
   }, []);
 
   const sendMessage = async () => {
     if (!message.trim() || !auth.currentUser) return;
-    await push(ref(db, 'chats'), {
-      userId: auth.currentUser.uid,
-      displayName: auth.currentUser.displayName || 'anonymous',
-      message,
-      timestamp: new Date().toISOString(),
-    });
-    setMessage('');
+    try {
+      await push(ref(db, 'chats'), {
+        userId: auth.currentUser.uid,
+        displayName: auth.currentUser.displayName || 'anonymous',
+        message,
+        timestamp: new Date().toISOString(),
+      });
+      setMessage('');
+    } catch (e) {
+      console.error(e);
+      setError("Could not send message. Please try again.");
+      Alert.alert("Error", "Could not send message. Please try again.");
+    }
   };
 
   const sendReply = React.useCallback(
@@ -94,14 +111,20 @@ export default function UserChat() {
       const path = replyingToReplyId
         ? `chats/${chatId}/replies/${replyingToReplyId}/replies`
         : `chats/${chatId}/replies`;
-      await push(ref(db, path), {
-        userId: auth.currentUser.uid,
-        displayName: auth.currentUser.displayName || 'anonymous',
-        message: replyText,
-        timestamp: new Date().toISOString(),
-      });
-      setReplyText('');
-      setReplyingToReplyId(null);
+      try {
+        await push(ref(db, path), {
+          userId: auth.currentUser.uid,
+          displayName: auth.currentUser.displayName || 'anonymous',
+          message: replyText,
+          timestamp: new Date().toISOString(),
+        });
+        setReplyText('');
+        setReplyingToReplyId(null);
+      } catch (e) {
+        console.error(e);
+        setError("Could not send reply. Please try again.");
+        Alert.alert("Error", "Could not send reply. Please try again.");
+      }
       setLoading(false);
     },
     [replyText, replyingToReplyId]
@@ -147,6 +170,8 @@ export default function UserChat() {
       }
     } catch (error) {
       console.error('Error updating reaction:', error);
+      setError("Could not update reaction. Please try again.");
+      Alert.alert("Error", "Could not update reaction. Please try again.");
     }
   };
 

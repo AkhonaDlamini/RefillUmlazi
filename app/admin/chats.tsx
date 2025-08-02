@@ -48,6 +48,7 @@ export default function UserChat() {
   >(null);
   const [users, setUsers] = useState<{ [uid: string]: { displayName?: string; email?: string } }>({});
   const [isUsersLoading, setIsUsersLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const { width } = useWindowDimensions();
 
   useEffect(() => {
@@ -86,11 +87,15 @@ export default function UserChat() {
               setIsUsersLoading(false);
             } catch (e) {
               console.error('Error fetching users:', e);
+              setError("Could not load users. Please try again later.");
               setIsUsersLoading(false);
+              Alert.alert("Error", "Could not load users. Please try again later.");
             }
           }, (error) => {
             console.error('Firebase users error:', error);
+            setError("Could not load users. Please try again later.");
             setIsUsersLoading(false);
+            Alert.alert("Error", "Could not load users. Please try again later.");
           });
         } else {
           setUsers({});
@@ -98,9 +103,13 @@ export default function UserChat() {
         }
       } catch (e) {
         console.error('Error fetching chats:', e);
+        setError("Could not load chats. Please try again later.");
+        Alert.alert("Error", "Could not load chats. Please try again later.");
       }
     }, (error) => {
       console.error('Firebase chats error:', error);
+      setError("Could not load chats. Please try again later.");
+      Alert.alert("Error", "Could not load chats. Please try again later.");
     });
     return () => unsubscribe();
   }, []);
@@ -117,6 +126,8 @@ export default function UserChat() {
       setMessage('');
     } catch (e) {
       console.error('Error sending message:', e);
+      setError("Could not send message. Please try again.");
+      Alert.alert("Error", "Could not send message. Please try again.");
     }
   };
 
@@ -138,6 +149,8 @@ export default function UserChat() {
         setReplyingToReplyId(null);
       } catch (e) {
         console.error('Error sending reply:', e);
+        setError("Could not send reply. Please try again.");
+        Alert.alert("Error", "Could not send reply. Please try again.");
       } finally {
         setLoading(false);
       }
@@ -185,6 +198,8 @@ export default function UserChat() {
       }
     } catch (error) {
       console.error('Error updating reaction:', error);
+      setError("Could not update reaction. Please try again.");
+      Alert.alert("Error", "Could not update reaction. Please try again.");
     }
   };
 
@@ -215,6 +230,7 @@ export default function UserChat() {
       console.log('Chat deleted:', chatId);
     } catch (error) {
       Alert.alert("Error", "Failed to delete chat.");
+      setError("Failed to delete chat.");
       console.error("Error deleting chat:", error);
     }
   };
@@ -249,6 +265,7 @@ export default function UserChat() {
       console.log('Reply deleted:', path);
     } catch (error) {
       Alert.alert("Error", "Failed to delete reply.");
+      setError("Failed to delete reply.");
       console.error("Error deleting reply:", error);
     }
   }
@@ -503,6 +520,11 @@ export default function UserChat() {
   return (
     <View style={styles.container}>
       <Text style={styles.header}>Community Forum</Text>
+      {error && (
+        <View style={{ padding: 10 }}>
+          <Text style={{ color: 'red', textAlign: 'center' }}>{error}</Text>
+        </View>
+      )}
       {isUsersLoading ? (
         <ActivityIndicator size="large" color="#1E90FF" style={{ marginTop: 20 }} />
       ) : (

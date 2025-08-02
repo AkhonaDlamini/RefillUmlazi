@@ -14,24 +14,34 @@ export default function AdminAnnouncements() {
   const [announcementInput, setAnnouncementInput] = useState('');
   const [editId, setEditId] = useState<string | null>(null);
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [error, setError] = useState<string | null>(null);
 
   // Listen to announcements in Firebase
   useEffect(() => {
-    const announcementsRef = ref(db, 'announcements');
-    const unsubscribe = onValue(announcementsRef, (snapshot) => {
-      const data = snapshot.val();
-      if (data) {
-        const parsed = Object.entries(data).map(([id, value]) => ({
-          id,
-          ...(value as Omit<Announcement, 'id'>),
-        }));
-        setAnnouncements(parsed.reverse());
-      } else {
-        setAnnouncements([]);
-      }
-    });
-
-    return () => unsubscribe();
+    try {
+      const announcementsRef = ref(db, 'announcements');
+      const unsubscribe = onValue(announcementsRef, (snapshot) => {
+        const data = snapshot.val();
+        if (data) {
+          const parsed = Object.entries(data).map(([id, value]) => ({
+            id,
+            ...(value as Omit<Announcement, 'id'>),
+          }));
+          setAnnouncements(parsed.reverse());
+        } else {
+          setAnnouncements([]);
+        }
+      }, (err) => {
+        console.error(err);
+        setError("Could not load announcements. Please try again later.");
+        Alert.alert("Error", "Could not load announcements. Please try again later.");
+      });
+      return () => unsubscribe();
+    } catch (e) {
+      console.error(e);
+      setError("Could not load announcements. Please try again later.");
+      Alert.alert("Error", "Could not load announcements. Please try again later.");
+    }
   }, []);
 
   // Update current time every second for live timestamps
@@ -63,20 +73,25 @@ export default function AdminAnnouncements() {
     const text = announcementInput.trim();
     if (!text) return;
 
-    if (editId) {
-      await update(ref(db, `announcements/${editId}`), {
-        text,
-        timestamp: new Date().toISOString(),
-      });
-      setEditId(null);
-    } else {
-      await push(ref(db, 'announcements'), {
-        text,
-        timestamp: new Date().toISOString(),
-      });
+    try {
+      if (editId) {
+        await update(ref(db, `announcements/${editId}`), {
+          text,
+          timestamp: new Date().toISOString(),
+        });
+        setEditId(null);
+      } else {
+        await push(ref(db, 'announcements'), {
+          text,
+          timestamp: new Date().toISOString(),
+        });
+      }
+      setAnnouncementInput('');
+    } catch (e) {
+      console.error(e);
+      setError("Could not save announcement. Please try again.");
+      Alert.alert("Error", "Could not save announcement. Please try again.");
     }
-
-    setAnnouncementInput('');
   };
 
   // Start editing an announcement
@@ -86,10 +101,6 @@ export default function AdminAnnouncements() {
   };
 
   // Confirm and delete an announcement
-  // Delete announcement
-  // This function will be called when the delete button is pressed
-  // It will show an alert to confirm the deletion
-  // and then remove the announcement from the database
   const handleDelete = async (id: string) => {
     // Web: use window.confirm
     if (typeof window !== "undefined" && window.confirm) {
@@ -97,9 +108,9 @@ export default function AdminAnnouncements() {
       if (!confirmed) return;
       try {
         await remove(ref(db, `announcements/${id}`));
-        // Optionally show a toast or alert for success
       } catch (error) {
         alert("Failed to delete announcement.");
+        setError("Failed to delete announcement.");
         console.error("Error deleting announcement:", error);
       }
       return;
@@ -114,24 +125,29 @@ export default function AdminAnnouncements() {
         {
           text: "Delete",
           style: "destructive",
-            onPress: async () => {
-              try {
-                await remove(ref(db, `announcements/${id}`));
-                // Optionally show a toast or alert for success
-              } catch (error) {
-                Alert.alert("Error", "Failed to delete announcement.");
-                console.error("Error deleting announcement:", error);
-              }// Native: Use Alert.alert
-            },
+          onPress: async () => {
+            try {
+              await remove(ref(db, `announcements/${id}`));
+            } catch (error) {
+              Alert.alert("Error", "Failed to delete announcement.");
+              setError("Failed to delete announcement.");
+              console.error("Error deleting announcement:", error);
+            }
+          },
         },
       ]
     );
   };
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.appName}>Announcements</Text>
       </View>
+
+      {error && (
+        <Text style={{ color: 'red', textAlign: 'center', marginBottom: 10 }}>{error}</Text>
+      )}
 
       <TextInput
         style={styles.input}

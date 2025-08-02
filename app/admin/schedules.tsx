@@ -1,10 +1,11 @@
 import { Ionicons } from "@expo/vector-icons";
+import { Picker } from "@react-native-picker/picker";
 import { onValue, push, ref, remove, update } from "firebase/database";
 import React, { useEffect, useState } from "react";
 import { Alert, FlatList, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import DateTimePickerModal from "react-native-modal-datetime-picker";
 import { db } from "../../config/firebaseConfig";
-import { Picker } from "@react-native-picker/picker";
+
 interface Schedule {
   id: string;
   location: string;
@@ -27,22 +28,32 @@ export default function AdminSchedules() {
   const [reason, setReason] = useState("");
 
   useEffect(() => {
-    const schedulesRef = ref(db, "admin/schedules");
-    const unsubscribe = onValue(schedulesRef, (snapshot) => {
-      const data = snapshot.val();
-      if (data) {
-        const loadedSchedules: Schedule[] = Object.entries(data).map(
-          ([id, value]: any) => ({
-            id,
-            ...value,
-          })
-        );
-        setSchedules(loadedSchedules);
-      } else {
-        setSchedules([]);
-      }
-    });
-    return () => unsubscribe();
+    try {
+      const schedulesRef = ref(db, "admin/schedules");
+      const unsubscribe = onValue(schedulesRef, (snapshot) => {
+        try {
+          const data = snapshot.val();
+          if (data) {
+            const loadedSchedules: Schedule[] = Object.entries(data).map(
+              ([id, value]: any) => ({
+                id,
+                ...value,
+              })
+            );
+            setSchedules(loadedSchedules);
+          } else {
+            setSchedules([]);
+          }
+        } catch (err) {
+          console.error("Error processing schedules data:", err);
+          Alert.alert("Error", "Failed to load schedules. Please try again.");
+        }
+      });
+      return () => unsubscribe();
+    } catch (error) {
+      console.error("Error setting up schedule listener:", error);
+      Alert.alert("Error", "Could not fetch schedules.");
+    }
   }, []);
 
   const isValidTime = (time: string) =>
@@ -64,44 +75,55 @@ export default function AdminSchedules() {
     setReason("");
   };
 
-  const addOrUpdateSchedule = () => {
-    if (!selectedLocation || !selectedDate || !startTime || !endTime) {
-      Alert.alert("Missing Fields", "Please make sure all fields are filled.");
-      return;
+  const addOrUpdateSchedule = async () => {
+    try {
+      if (!selectedLocation || !selectedDate || !startTime || !endTime) {
+        Alert.alert("Missing Fields", "Please make sure all fields are filled.");
+        return;
+      }
+
+      if (!isValidTime(startTime) || !isValidTime(endTime)) {
+        Alert.alert("Invalid Time", "Use format HH:MM.");
+        return;
+      }
+
+      if (!isStartTimeBeforeEndTime(startTime, endTime)) {
+        Alert.alert("Invalid Time", "Start time must be before end time.");
+        return;
+      }
+
+      const formattedDate = selectedDate.toISOString().split("T")[0];
+
+      const scheduleData = {
+        location: selectedLocation,
+        day: selectedDay,
+        date: formattedDate,
+        startTime,
+        endTime,
+        reason,
+      };
+
+      if (editingId) {
+        await update(ref(db, `admin/schedules/${editingId}`), scheduleData);
+      } else {
+        await push(ref(db, "admin/schedules"), scheduleData);
+      }
+
+      resetFields();
+    } catch (error) {
+      console.error("Error saving schedule:", error);
+      Alert.alert("Error", "Failed to save schedule. Please try again.");
     }
-
-    if (!isValidTime(startTime) || !isValidTime(endTime)) {
-      Alert.alert("Invalid Time", "Use format HH:MM.");
-      return;
-    }
-
-    if (!isStartTimeBeforeEndTime(startTime, endTime)) {
-      Alert.alert("Invalid Time", "Start time must be before end time.");
-      return;
-    }
-
-    const formattedDate = selectedDate.toISOString().split("T")[0];
-
-    const scheduleData = {
-      location: selectedLocation,
-      day: selectedDay,
-      date: formattedDate,
-      startTime,
-      endTime,
-      reason,
-    };
-
-    if (editingId) {
-      update(ref(db, `admin/schedules/${editingId}`), scheduleData);
-    } else {
-      push(ref(db, "admin/schedules"), scheduleData);
-    }
-
-    resetFields();
   };
 
-  const deleteSchedule = (id: string) =>
-    remove(ref(db, `admin/schedules/${id}`));
+  const deleteSchedule = async (id: string) => {
+    try {
+      await remove(ref(db, `admin/schedules/${id}`));
+    } catch (error) {
+      console.error("Error deleting schedule:", error);
+      Alert.alert("Error", "Failed to delete schedule.");
+    }
+  };
 
   const editSchedule = (schedule: Schedule) => {
     setSelectedLocation(schedule.location);
@@ -124,22 +146,22 @@ export default function AdminSchedules() {
   };
 
   const getReasonTagStyle = (reason: string) => {
-  const lower = reason.toLowerCase();
+    const lower = reason.toLowerCase();
 
-  if (lower.includes("maintenance")) {
-    return { backgroundColor: "#FFD700", color: "#000" }; // Yellow
-  } else if (lower.includes("burst") || lower.includes("pipe")) {
-    return { backgroundColor: "#FF4C4C", color: "#fff" }; // Red
-  } else if (lower.includes("inspection")) {
-    return { backgroundColor: "#4B39EF", color: "#fff" }; // Blue
-  } else if (lower.includes("upgrade")) {
-    return { backgroundColor: "#32CD32", color: "#fff" }; // Green
-  } else if (lower.includes("emergency")) {
-    return { backgroundColor: "#8B0000", color: "#fff" }; // Dark Red
-  } else {
-    return { backgroundColor: "#ccc", color: "#333" }; // Default Gray
-  }
-};
+    if (lower.includes("maintenance")) {
+      return { backgroundColor: "#FFD700", color: "#000" }; // Yellow
+    } else if (lower.includes("burst") || lower.includes("pipe")) {
+      return { backgroundColor: "#FF4C4C", color: "#fff" }; // Red
+    } else if (lower.includes("inspection")) {
+      return { backgroundColor: "#4B39EF", color: "#fff" }; // Blue
+    } else if (lower.includes("upgrade")) {
+      return { backgroundColor: "#32CD32", color: "#fff" }; // Green
+    } else if (lower.includes("emergency")) {
+      return { backgroundColor: "#8B0000", color: "#fff" }; // Dark Red
+    } else {
+      return { backgroundColor: "#ccc", color: "#333" }; // Default Gray
+    }
+  };
 
   return (
     <View style={styles.container}>
@@ -147,7 +169,7 @@ export default function AdminSchedules() {
         <Text style={styles.title}>Schedule Management</Text>
         <View style={styles.blueLine} />
 
-         {/* Location Picker */}
+        {/* Location Picker */}
         <View style={styles.pickerWrapper}>
           <Picker
             selectedValue={selectedLocation}
@@ -216,10 +238,10 @@ export default function AdminSchedules() {
         />
 
         <TextInput
-        placeholder="Reason"
-        value={reason}
-        onChangeText={setReason}
-        style={styles.input}
+          placeholder="Reason"
+          value={reason}
+          onChangeText={setReason}
+          style={styles.input}
         />
 
         <TouchableOpacity style={styles.addButton} onPress={addOrUpdateSchedule}>
@@ -244,21 +266,16 @@ export default function AdminSchedules() {
                   {item.date} | {item.startTime} to {item.endTime}
                 </Text>
                 {item.reason ? (
-  <View
-    style={[
-      styles.reasonTag,
-      getReasonTagStyle(item.reason)
-    ]}
-  >
-    <Text style={styles.reasonTagText}>
-      {item.reason}
-    </Text>
-  </View>
-) : (
-  <Text style={{ color: "#999", fontStyle: "italic" }}>
-    Reason: Not provided
-  </Text>
-)}
+                  <View style={[styles.reasonTag, getReasonTagStyle(item.reason)]}>
+                    <Text style={styles.reasonTagText}>
+                      {item.reason}
+                    </Text>
+                  </View>
+                ) : (
+                  <Text style={{ color: "#999", fontStyle: "italic" }}>
+                    Reason: Not provided
+                  </Text>
+                )}
               </View>
               <View style={styles.cardActions}>
                 <TouchableOpacity onPress={() => editSchedule(item)}>
@@ -364,15 +381,14 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   reasonTag: {
-  alignSelf: "flex-start",
-  paddingVertical: 4,
-  paddingHorizontal: 8,
-  borderRadius: 4,
-  marginTop: 6,
-},
-reasonTagText: {
-  fontSize: 13,
-  fontWeight: "600",
-},
-
+    alignSelf: "flex-start",
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: 4,
+    marginTop: 6,
+  },
+  reasonTagText: {
+    fontSize: 13,
+    fontWeight: "600",
+  },
 });

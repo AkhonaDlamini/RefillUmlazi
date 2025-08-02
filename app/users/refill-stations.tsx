@@ -34,26 +34,41 @@ export default function RefillStationScreen() {
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [helpVisible, setHelpVisible] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const { isDark } = useContext(ThemeContext);
   const mapRef = useRef<MapView>(null);
 
   useEffect(() => {
-    const db = getDatabase();
-    const stationRef = ref(db, 'admin/refill-stations');
-    onValue(stationRef, (snapshot) => {
-      const data = snapshot.val();
-      if (data) {
-        const stationsArray: RefillStation[] = Object.keys(data).map((key) => ({
-          id: key,
-          ...data[key],
-          latitude: Number(data[key].latitude),
-          longitude: Number(data[key].longitude),
-        }));
-        setRefillStations(stationsArray);
-      } else {
-        setRefillStations([]);
-      }
-    });
+    try {
+      const db = getDatabase();
+      const stationRef = ref(db, 'admin/refill-stations');
+      onValue(
+        stationRef,
+        (snapshot) => {
+          const data = snapshot.val();
+          if (data) {
+            const stationsArray: RefillStation[] = Object.keys(data).map((key) => ({
+              id: key,
+              ...data[key],
+              latitude: Number(data[key].latitude),
+              longitude: Number(data[key].longitude),
+            }));
+            setRefillStations(stationsArray);
+          } else {
+            setRefillStations([]);
+          }
+        },
+        (err) => {
+          console.error(err);
+          setError("Could not load refill stations. Please try again later.");
+          Alert.alert("Error", "Could not load refill stations. Please try again later.");
+        }
+      );
+    } catch (e) {
+      console.error(e);
+      setError("Could not load refill stations. Please try again later.");
+      Alert.alert("Error", "Could not load refill stations. Please try again later.");
+    }
   }, []);
 
   const filteredStations = refillStations.filter((station) =>

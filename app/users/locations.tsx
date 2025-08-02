@@ -11,6 +11,7 @@ export default function Locations() {
   const [locations, setLocations] = useState<string[]>([]);
   const [isFocused, setIsFocused] = useState(false);
   const [helpVisible, setHelpVisible] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const { isDark } = useContext(ThemeContext);
   const router = useRouter();
   const auth = getAuth();
@@ -19,12 +20,22 @@ export default function Locations() {
 
   useEffect(() => {
     if (!uid) return;
-    const locationsRef = ref(db, `users/${uid}/locations`);
-    const unsubscribe = onValue(locationsRef, (snapshot) => {
-      const data = snapshot.val();
-      setLocations(data ? Object.values(data) : []);
-    });
-    return () => unsubscribe();
+    try {
+      const locationsRef = ref(db, `users/${uid}/locations`);
+      const unsubscribe = onValue(locationsRef, (snapshot) => {
+        const data = snapshot.val();
+        setLocations(data ? Object.values(data) : []);
+      }, (err) => {
+        console.error(err);
+        setError("Could not load locations. Please try again later.");
+        Alert.alert("Error", "Could not load locations. Please try again later.");
+      });
+      return () => unsubscribe();
+    } catch (e) {
+      console.error(e);
+      setError("Could not load locations. Please try again later.");
+      Alert.alert("Error", "Could not load locations. Please try again later.");
+    }
   }, [uid, db]);
 
   const availableLocations = [
@@ -53,24 +64,42 @@ export default function Locations() {
       return;
     }
     const updatedLocations = [...locations, inputText];
-    await set(ref(db, `users/${uid}/locations`), updatedLocations);
-    setInputText("");
+    try {
+      await set(ref(db, `users/${uid}/locations`), updatedLocations);
+      setInputText("");
+    } catch (e) {
+      console.error(e);
+      setError("Could not add location. Please try again.");
+      Alert.alert("Error", "Could not add location. Please try again.");
+    }
   };
 
   const removeLocation = async (location: string) => {
     const updated = locations.filter((item) => item !== location);
-    await set(ref(db, `users/${uid}/locations`), updated);
+    try {
+      await set(ref(db, `users/${uid}/locations`), updated);
 
-    const selectedRef = ref(db, `users/${uid}/selectedLocation`);
-    const snapshot = await get(selectedRef);
-    if (snapshot.exists() && snapshot.val() === location) {
-      await remove(selectedRef);
+      const selectedRef = ref(db, `users/${uid}/selectedLocation`);
+      const snapshot = await get(selectedRef);
+      if (snapshot.exists() && snapshot.val() === location) {
+        await remove(selectedRef);
+      }
+    } catch (e) {
+      console.error(e);
+      setError("Could not remove location. Please try again.");
+      Alert.alert("Error", "Could not remove location. Please try again.");
     }
   };
 
   const handleLocationPress = async (item: string) => {
-    await set(ref(db, `users/${uid}/selectedLocation`), item);
-    router.push("/users/schedules");
+    try {
+      await set(ref(db, `users/${uid}/selectedLocation`), item);
+      router.push("/users/schedules");
+    } catch (e) {
+      console.error(e);
+      setError("Could not select location. Please try again.");
+      Alert.alert("Error", "Could not select location. Please try again.");
+    }
   };
 
   const renderSuggestion = ({ item }: { item: string }) => (

@@ -18,19 +18,26 @@ export default function AnnouncementsScreen() {
   const { announcements, readIds, markAsRead } = useAnnouncements();
   const [currentTime, setCurrentTime] = useState(new Date());
   const [userCreationTime, setUserCreationTime] = useState<Date | null>(null);
+  const [error, setError] = useState<string | null>(null); // Add error state
   const router = useRouter();
   const auth = getAuth();
   const { isDark } = React.useContext(ThemeContext);
 
   useEffect(() => {
-    if (!auth.currentUser) {
-      Alert.alert("Authentication Required", "Please log in to view announcements.");
-      router.replace("/auth/login");
-    } else {
-      const creationTime = auth.currentUser.metadata.creationTime;
-      if (creationTime) {
-        setUserCreationTime(new Date(creationTime));
+    try {
+      if (!auth.currentUser) {
+        Alert.alert("Authentication Required", "Please log in to view announcements.");
+        router.replace("/auth/login");
+      } else {
+        const creationTime = auth.currentUser.metadata.creationTime;
+        if (creationTime) {
+          setUserCreationTime(new Date(creationTime));
+        }
       }
+    } catch (e) {
+      console.error(e);
+      setError("Could not load announcements. Please try again later.");
+      Alert.alert("Error", "Could not load announcements. Please try again later.");
     }
   }, [auth.currentUser, router]);
 
@@ -38,6 +45,15 @@ export default function AnnouncementsScreen() {
     const interval = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => clearInterval(interval);
   }, []);
+
+  const safeMarkAsRead = async (id: string) => {
+    try {
+      await markAsRead(id);
+    } catch (e) {
+      console.error(e);
+      Alert.alert("Error", "Could not mark announcement as read.");
+    }
+  };
 
   const filteredAnnouncements = announcements.filter((item) => {
     if (!userCreationTime || !item.timestamp) return true;
@@ -176,43 +192,44 @@ export default function AnnouncementsScreen() {
       <View style={styles.headerContainer}>
         <Text style={styles.header}>Announcements</Text>
       </View>
-      {auth.currentUser ? (
+      {error ? (
+        <Text style={styles.emptyText}>{error}</Text>
+      ) : auth.currentUser ? (
         <FlatList
-  data={filteredAnnouncements}
-  keyExtractor={(item) => item.id}
-  contentContainerStyle={styles.listContainer} // <- Add this line
-  renderItem={({ item }) => {
-    const isRead = readIds.includes(item.id);
-    return (
-      <TouchableOpacity
-        onPress={() => markAsRead(item.id)}
-        activeOpacity={0.8}
-        style={[styles.card, !isRead && styles.unreadCard]}
-      >
-        <View style={{ flexDirection: "row", alignItems: "center" }}>
-          {!isRead && (
-            <View style={styles.newBadge}>
-              <Text style={styles.newBadgeText}>NEW</Text>
-            </View>
-          )}
-          <Text
-            style={[
-              styles.cardText,
-              { flexShrink: 1, marginLeft: isRead ? 0 : 12 },
-            ]}
-          >
-            📣 {item.text}
-          </Text>
-        </View>
-        <Text style={styles.timestamp}>{formatTimestamp(item.timestamp)}</Text>
-      </TouchableOpacity>
-    );
-  }}
-  ListEmptyComponent={
-    <Text style={styles.emptyText}>No announcements yet.</Text>
-  }
-/>
-
+          data={filteredAnnouncements}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={styles.listContainer}
+          renderItem={({ item }) => {
+            const isRead = readIds.includes(item.id);
+            return (
+              <TouchableOpacity
+                onPress={() => safeMarkAsRead(item.id)}
+                activeOpacity={0.8}
+                style={[styles.card, !isRead && styles.unreadCard]}
+              >
+                <View style={{ flexDirection: "row", alignItems: "center" }}>
+                  {!isRead && (
+                    <View style={styles.newBadge}>
+                      <Text style={styles.newBadgeText}>NEW</Text>
+                    </View>
+                  )}
+                  <Text
+                    style={[
+                      styles.cardText,
+                      { flexShrink: 1, marginLeft: isRead ? 0 : 12 },
+                    ]}
+                  >
+                    📣 {item.text}
+                  </Text>
+                </View>
+                <Text style={styles.timestamp}>{formatTimestamp(item.timestamp)}</Text>
+              </TouchableOpacity>
+            );
+          }}
+          ListEmptyComponent={
+            <Text style={styles.emptyText}>No announcements yet.</Text>
+          }
+        />
       ) : (
         <Text style={styles.emptyText}>Loading...</Text>
       )}

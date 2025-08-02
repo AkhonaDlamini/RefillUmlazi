@@ -10,6 +10,7 @@ export default function AdminDashboard() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -26,6 +27,8 @@ export default function AdminDashboard() {
           }
         } catch (err) {
           console.error("Role check failed", err);
+          setError("Could not verify admin role. Please try again.");
+          Alert.alert("Error", "Could not verify admin role. Please try again.");
           router.replace("/auth/login");
         }
       } else {
@@ -41,9 +44,9 @@ export default function AdminDashboard() {
     try {
       await signOut(auth);
       router.replace("/auth/login");
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
       Alert.alert("Error", "Failed to sign out.");
+      setError("Failed to sign out. Please try again.");
     }
   };
 
@@ -65,6 +68,12 @@ export default function AdminDashboard() {
           <Ionicons name="log-out-outline" size={30} color="#FF6347" />
         </TouchableOpacity>
       </View>
+
+      {error && (
+        <View style={{ padding: 10 }}>
+          <Text style={{ color: 'red', textAlign: 'center' }}>{error}</Text>
+        </View>
+      )}
 
       <View style={styles.cardsContainer}>
         <TouchableOpacity
