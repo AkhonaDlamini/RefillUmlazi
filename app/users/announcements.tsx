@@ -1,5 +1,5 @@
-import { useAnnouncements } from "../../context/AnnouncementsContext";
 import { useRouter } from "expo-router";
+import { getAuth } from "firebase/auth";
 import React, { useEffect, useState } from "react";
 import {
   Alert,
@@ -9,8 +9,10 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { getAuth } from "firebase/auth";
+import { useAnnouncements } from "../../context/AnnouncementsContext";
 import { ThemeContext } from "../../context/ThemeContext";
+
+//A
 
 export default function AnnouncementsScreen() {
   const { announcements, readIds, markAsRead } = useAnnouncements();
