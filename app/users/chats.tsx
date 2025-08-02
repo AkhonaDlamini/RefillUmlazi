@@ -1,6 +1,6 @@
 import { onValue, push, ref, remove, update } from 'firebase/database';
 import React, { useContext, useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, BackHandler, FlatList, KeyboardAvoidingView, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, useWindowDimensions, View } from 'react-native';
+import { ActivityIndicator, BackHandler, FlatList, KeyboardAvoidingView, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, useWindowDimensions, View } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { auth, db } from '../../config/firebaseConfig';
 import { ThemeContext } from '../../context/ThemeContext';
@@ -8,7 +8,7 @@ import { ThemeContext } from '../../context/ThemeContext';
 type Chat = {
   id: string;
   userId: string;
-  displayName?: string; 
+  displayName?: string;
   message: string;
   timestamp: string;
   reactions?: { [userId: string]: string };
@@ -17,7 +17,7 @@ type Chat = {
 
 type Reply = {
   userId: string;
-  displayName?: string; 
+  displayName?: string;
   message: string;
   timestamp: string;
   reactions?: { [userId: string]: string };
@@ -25,12 +25,12 @@ type Reply = {
 };
 
 const reactionIcons = [
-  { name: 'thumbs-up', color: '#1E90FF' },   
-  { name: 'heart', color: '#FF4444' },       
-  { name: 'happy-outline', color: '#FFD700' }, 
-  { name: 'star', color: '#FFD700' },        
-  { name: 'sad-outline', color: '#6699CC' }, 
-  { name: 'skull-outline', color: '#FF6347' }, 
+  { name: 'thumbs-up', color: '#1E90FF' },
+  { name: 'heart', color: '#FF4444' },
+  { name: 'happy-outline', color: '#FFD700' },
+  { name: 'star', color: '#FFD700' },
+  { name: 'sad-outline', color: '#6699CC' },
+  { name: 'skull-outline', color: '#FF6347' },
 ];
 
 export default function UserChat() {
@@ -46,7 +46,6 @@ export default function UserChat() {
     | null
   >(null);
   const [users, setUsers] = useState<{ [uid: string]: { displayName?: string; email?: string } }>({});
-  const [error, setError] = useState<string | null>(null);
   const { width } = useWindowDimensions();
   const { isDark } = useContext(ThemeContext);
 
@@ -62,46 +61,30 @@ export default function UserChat() {
   }, [threadModalChatId]);
 
   useEffect(() => {
-    try {
-      const chatRef = ref(db, 'chats');
-      return onValue(chatRef, (snapshot) => {
-        const data = snapshot.val() || {};
-        const parsed = Object.entries(data).map(([id, value]) => ({ id, ...(value as Omit<Chat, 'id'>) }));
-        setChats(parsed.reverse());
-      });
-    } catch (e) {
-      console.error(e);
-      setError("Could not load chats. Please try again later.");
-    }
+    const chatRef = ref(db, 'chats');
+    return onValue(chatRef, (snapshot) => {
+      const data = snapshot.val() || {};
+      const parsed = Object.entries(data).map(([id, value]) => ({ id, ...(value as Omit<Chat, 'id'>) }));
+      setChats(parsed.reverse());
+    });
   }, []);
 
   useEffect(() => {
-    try {
-      const usersRef = ref(db, 'users');
-      return onValue(usersRef, (snapshot) => {
-        setUsers(snapshot.val() || {});
-      });
-    } catch (e) {
-      console.error(e);
-      setError("Could not load users. Please try again later.");
-    }
+    const usersRef = ref(db, 'users');
+    return onValue(usersRef, (snapshot) => {
+      setUsers(snapshot.val() || {});
+    });
   }, []);
 
   const sendMessage = async () => {
     if (!message.trim() || !auth.currentUser) return;
-    try {
-      await push(ref(db, 'chats'), {
-        userId: auth.currentUser.uid,
-        displayName: auth.currentUser.displayName || 'anonymous',
-        message,
-        timestamp: new Date().toISOString(),
-      });
-      setMessage('');
-    } catch (e) {
-      console.error(e);
-      setError("Could not send message. Please try again.");
-      Alert.alert("Error", "Could not send message. Please try again.");
-    }
+    await push(ref(db, 'chats'), {
+      userId: auth.currentUser.uid,
+      displayName: auth.currentUser.displayName || 'anonymous',
+      message,
+      timestamp: new Date().toISOString(),
+    });
+    setMessage('');
   };
 
   const sendReply = React.useCallback(
@@ -111,20 +94,14 @@ export default function UserChat() {
       const path = replyingToReplyId
         ? `chats/${chatId}/replies/${replyingToReplyId}/replies`
         : `chats/${chatId}/replies`;
-      try {
-        await push(ref(db, path), {
-          userId: auth.currentUser.uid,
-          displayName: auth.currentUser.displayName || 'anonymous',
-          message: replyText,
-          timestamp: new Date().toISOString(),
-        });
-        setReplyText('');
-        setReplyingToReplyId(null);
-      } catch (e) {
-        console.error(e);
-        setError("Could not send reply. Please try again.");
-        Alert.alert("Error", "Could not send reply. Please try again.");
-      }
+      await push(ref(db, path), {
+        userId: auth.currentUser.uid,
+        displayName: auth.currentUser.displayName || 'anonymous',
+        message: replyText,
+        timestamp: new Date().toISOString(),
+      });
+      setReplyText('');
+      setReplyingToReplyId(null);
       setLoading(false);
     },
     [replyText, replyingToReplyId]
@@ -170,8 +147,6 @@ export default function UserChat() {
       }
     } catch (error) {
       console.error('Error updating reaction:', error);
-      setError("Could not update reaction. Please try again.");
-      Alert.alert("Error", "Could not update reaction. Please try again.");
     }
   };
 
@@ -188,10 +163,10 @@ export default function UserChat() {
 
   const getDisplayName = React.useCallback(
     (userId?: string | null, displayName?: string) => {
-      if (displayName) return displayName; 
+      if (displayName) return displayName;
       if (!userId) return 'anonymous';
       if (users[userId]?.displayName) return users[userId].displayName;
-      return userId; 
+      return userId;
     },
     [users]
   );
@@ -219,7 +194,9 @@ export default function UserChat() {
 
         const options: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric', year: 'numeric' };
         return date.toLocaleDateString(undefined, options);
-      }return (
+      }
+
+      return (
         <View
           key={replyId}
           style={[
@@ -293,33 +270,47 @@ export default function UserChat() {
     const threadUserReaction = getUserReaction(threadChat.reactions);
 
     return (
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={[styles.threadModalContainer, { width, backgroundColor: isDark ? '#181818' : '#fff' }]}>
-        <View style={[styles.threadHeader, {backgroundColor: isDark ? '#23272b' : '#fff', borderBottomColor: isDark ? '#444' : '#eee'}]}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 70 : 50} // Reduced offset
+        style={[styles.threadModalContainer, { width, backgroundColor: isDark ? '#181818' : '#fff' }]}
+      >
+        <View style={[styles.threadHeader, { backgroundColor: isDark ? '#23272b' : '#fff', borderBottomColor: isDark ? '#444' : '#eee' }]}>
           <TouchableOpacity onPress={() => { setThreadModalChatId(null); setReplyingToReplyId(null); }} style={styles.backButton}>
             <Ionicons name="arrow-back" size={24} color="#1E90FF" />
           </TouchableOpacity>
-          <Text style={[styles.threadHeaderText, {color: isDark? "#1E90FF" : "#1E90FF"}]}>Thread</Text>
+          <Text style={[styles.threadHeaderText, { color: isDark ? "#1E90FF" : "#1E90FF" }]}>Thread</Text>
           <View style={{ width: 24 }} />
         </View>
 
         <View style={styles.threadModal}>
-          <ScrollView style={{ flex: 1 }}>
+          <ScrollView
+            style={{ flex: 1 }}
+            contentContainerStyle={{ paddingBottom: 80 }} // Reduced padding
+          >
             <View style={[styles.reportCard, { backgroundColor: isDark ? '#23272b' : '#F0F0F0' }]}>
               <View style={styles.metaRow}>
-                <Text style={[styles.metaText, { color: isDark? "#aaa" : "#666"}]}>{getDisplayName(threadChat.userId, threadChat.displayName)}</Text>
-                <Text style={[styles.metaText, { color: isDark? "#aaa" : "#666"}]}>{formatTime(threadChat.timestamp)}</Text>
+                <Text style={[styles.metaText, { color: isDark ? "#aaa" : "#666" }]}>{getDisplayName(threadChat.userId, threadChat.displayName)}</Text>
+                <Text style={[styles.metaText, { color: isDark ? "#aaa" : "#666" }]}>{formatTime(threadChat.timestamp)}</Text>
               </View>
               <Text style={[styles.reportMessage, { color: isDark ? "#fff" : "#333" }]}>{threadChat.message}</Text>
               <View style={styles.actionRow}>
                 <TouchableOpacity
-                  style={[styles.reactionButton, userReaction && { backgroundColor: '#DCF8C6' }, {borderColor: isDark? "#444" : "#ccc"}]}
+                  style={[styles.reactionButton, userReaction && { backgroundColor: '#DCF8C6' }, { borderColor: isDark ? "#444" : "#ccc" }]}
                   onPress={() => setReactionModalVisible({ type: 'chat', id: threadChat.id, chatId: threadChat.id })}
                 >
-                  <Ionicons name={getUserReaction (threadChat.reactions) ? "#4CAF50" : (isDark? "#aaa" : "#555")} size={20} color={threadUserReaction ? '#4CAF50' : '#555'} />
-                  <Text style={[styles.countText, { color: isDark? "#aaa" : "#555"}]}>{getReactionCount(threadChat.reactions)}</Text>
+                  <Ionicons
+                    name={threadUserReaction || 'thumbs-up-outline'}
+                    size={20}
+                    color={threadUserReaction ? '#4CAF50' : (isDark ? "#aaa" : "#555")}
+                  />
+                  <Text style={[styles.countText, { color: isDark ? "#aaa" : "#555" }]}>{getReactionCount(threadChat.reactions)}</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={[styles.replyCountButton, {borderColor: isDark ? "#444" : "#ccc"}]} onPress={() => {}}>
-                  <Ionicons name="chatbubble-outline" size={20} color= {isDark ? "#aaa" : "#555"}/>
+                <TouchableOpacity
+                  style={[styles.replyCountButton, { borderColor: isDark ? "#444" : "#ccc" }]}
+                  onPress={() => {}}
+                >
+                  <Ionicons name="chatbubble-outline" size={20} color={isDark ? "#aaa" : "#555"} />
                   <Text style={[styles.countText, { color: isDark ? "#aaa" : "#555" }]}>{threadChat.replies ? Object.keys(threadChat.replies).length : 0}</Text>
                 </TouchableOpacity>
               </View>
@@ -335,30 +326,36 @@ export default function UserChat() {
             </View>
           </ScrollView>
 
-          <View style={[styles.replyInputContainer, {backgroundColor: isDark ? '#23272b' : '#fff', borderTopColor: isDark ? '#444' : '#ccc'}]}>
-            {replyingToReplyId && (
-              <View style={[styles.replyingToIndicator, {backgroundColor: isDark ? '#23272b' : '#f0f0f0'}]}>
-                <Text style={[styles.replyingToText, { color: isDark ? "#fff" : "#666"}]}>Replying to reply</Text>
-                <TouchableOpacity onPress={() => setReplyingToReplyId(null)}>
-                  <Ionicons name="close" size={16} color={isDark ? "#fff" : "#666"} />
-                </TouchableOpacity>
-              </View>
-            )}
-            <TextInput
-              style={[styles.replyInput, {color: isDark ? "#fff" : "#000", borderColor: isDark ? "#444" : "#ccc", backgroundColor: isDark ? '#181818' : '#fff'}]}
-              placeholder={replyingToReplyId ? "Write your reply to this message..." : "Write your reply..."}
-              placeholderTextColor= {isDark ? "#aaa" : "#999"}
-              multiline
-              value={replyText}
-              onChangeText={setReplyText}
-            />
-            {loading
-              ? <ActivityIndicator size="small" color="#1E90FF" style={{ marginLeft: 10 }} />
-              : <TouchableOpacity onPress={() => sendReply(threadChat.id)} style={styles.replySendButton}>
-                  <Text style={styles.replySendButtonText}>Send</Text>
-                </TouchableOpacity>
-            }
-          </View>
+          <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            keyboardVerticalOffset={Platform.OS === 'ios' ? 70 : 50} // Reduced offset
+            style={{ width: '100%' }}
+          >
+            <View style={[styles.replyInputContainer, { backgroundColor: isDark ? '#23272b' : '#fff', borderTopColor: isDark ? '#444' : '#ccc' }]}>
+              {replyingToReplyId && (
+                <View style={[styles.replyingToIndicator, { backgroundColor: isDark ? '#23272b' : '#f0f0f0' }]}>
+                  <Text style={[styles.replyingToText, { color: isDark ? "#fff" : "#666" }]}>Replying to reply</Text>
+                  <TouchableOpacity onPress={() => setReplyingToReplyId(null)}>
+                    <Ionicons name="close" size={16} color={isDark ? "#fff" : "#666"} />
+                  </TouchableOpacity>
+                </View>
+              )}
+              <TextInput
+                style={[styles.replyInput, { color: isDark ? "#fff" : "#000", borderColor: isDark ? "#444" : "#ccc", backgroundColor: isDark ? '#181818' : '#fff' }]}
+                placeholder={replyingToReplyId ? "Write your reply to this message..." : "Write your reply..."}
+                placeholderTextColor={isDark ? "#aaa" : "#999"}
+                multiline
+                value={replyText}
+                onChangeText={setReplyText}
+              />
+              {loading
+                ? <ActivityIndicator size="small" color="#1E90FF" style={{ marginLeft: 10 }} />
+                : <TouchableOpacity onPress={() => sendReply(threadChat.id)} style={styles.replySendButton}>
+                    <Text style={styles.replySendButtonText}>Send</Text>
+                  </TouchableOpacity>
+              }
+            </View>
+          </KeyboardAvoidingView>
         </View>
       </KeyboardAvoidingView>
     );
@@ -391,7 +388,7 @@ export default function UserChat() {
       <Modal transparent animationType="fade" visible={!!reactionModalVisible} onRequestClose={() => setReactionModalVisible(null)}>
         <TouchableOpacity style={styles.reactionModalOverlay} activeOpacity={1} onPress={() => setReactionModalVisible(null)}>
           <View style={[styles.reactionModalContent, { backgroundColor: isDark ? '#23272b' : '#fff' }]}>
-            <Text style={[styles.reactionModalTitle, {color: isDark? "#fff" : "#222"}]}>Choose a reaction</Text>
+            <Text style={[styles.reactionModalTitle, { color: isDark ? "#fff" : "#222" }]}>Choose a reaction</Text>
             <View style={styles.reactionsRow}>
               {reactionIcons.map(({ name, color }) => (
                 <TouchableOpacity
@@ -413,16 +410,19 @@ export default function UserChat() {
   };
 
   return (
-    <View style={[styles.container, {backgroundColor: isDark ? '#181818' : '#FFFFFF'}]}>
-      <View style={[styles.headerContainer, {backgroundColor: isDark ? '#181818' : '#FFFFFF'}]}> 
-      <Text style={[styles.header, { color: isDark ? "#1E90FF" : "#1E90FF", backgroundColor: isDark ? "#181818" : "#fff", borderBottomColor: "#1E90FF" }]}>Community Chat</Text>
-      
-    </View>
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 70 : 50} // Reduced offset
+      style={[styles.container, { backgroundColor: isDark ? '#181818' : '#FFFFFF' }]}
+    >
+      <View style={[styles.headerContainer, { backgroundColor: isDark ? '#181818' : '#FFFFFF' }]}>
+        <Text style={[styles.header, { color: isDark ? "#1E90FF" : "#1E90FF", backgroundColor: isDark ? "#181818" : "#fff", borderBottomColor: "#1E90FF" }]}>Community Chat</Text>
+      </View>
       <FlatList
         data={chats}
         keyExtractor={item => item.id}
         inverted
-        contentContainerStyle={{ paddingBottom: 100 }}
+        contentContainerStyle={{ paddingBottom: 80 }} // Reduced padding
         renderItem={({ item }) => {
           const userReaction = getUserReaction(item.reactions);
           const replyCount = item.replies ? Object.keys(item.replies).length : 0;
@@ -484,54 +484,70 @@ export default function UserChat() {
           );
         }}
         ListEmptyComponent={
-        <View style={{ marginTop: 20 }}>
-          <Text style={{ color: isDark ? "#aaa" : "#777", fontStyle: 'italic' }}>No messages yet.</Text></View>}
+          <View style={{ marginTop: 20 }}>
+            <Text style={{ color: isDark ? "#aaa" : "#777", fontStyle: 'italic' }}>No messages yet.</Text>
+          </View>
+        }
       />
-     <KeyboardAvoidingView
-  behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-  style={[
-    styles.inputContainer,
-    {
-      backgroundColor: isDark ? "#1A1A1A" : "#fff",
-      borderTopColor: isDark ? "#333" : "#ccc",
-    },
-  ]}
->
-  <TextInput
-    style={[
-      styles.input,
-      {
-        color: isDark ? "#fff" : "#000",
-        backgroundColor: isDark ? "#2A2A2A" : "#fff",
-        borderColor: isDark ? "#444" : "#ccc",
-      },
-    ]}
-    placeholder="Type your message..."
-    placeholderTextColor={isDark ? "#999" : "#999"}
-    multiline
-    value={message}
-    onChangeText={setMessage}
-  />
-  <TouchableOpacity onPress={sendMessage} style={styles.sendButton}>
-    <Ionicons name="send" size={24} color="#fff" />
-  </TouchableOpacity>
-</KeyboardAvoidingView>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 70 : 50} // Reduced offset
+        style={{ width: '100%' }}
+      >
+        <View
+          style={[
+            styles.inputContainer,
+            {
+              backgroundColor: isDark ? "#1A1A1A" : "#fff",
+              borderTopColor: isDark ? "#333" : "#ccc",
+              flexShrink: 1,
+            },
+          ]}
+        >
+          <TextInput
+            style={[
+              styles.input,
+              {
+                color: isDark ? "#fff" : "#000",
+                backgroundColor: isDark ? "#2A2A2A" : "#fff",
+                borderColor: isDark ? "#444" : "#ccc",
+              },
+            ]}
+            placeholder="Type your message..."
+            placeholderTextColor={isDark ? "#999" : "#999"}
+            multiline
+            value={message}
+            onChangeText={setMessage}
+          />
+          <TouchableOpacity onPress={sendMessage} style={styles.sendButton}>
+            <Ionicons name="send" size={24} color="#fff" />
+          </TouchableOpacity>
+        </View>
+      </KeyboardAvoidingView>
 
-
-      <Modal visible={!!threadModalChatId} animationType="slide" onRequestClose={() => { setThreadModalChatId(null); setReplyingToReplyId(null); }} presentationStyle="pageSheet">
+      <Modal
+        visible={!!threadModalChatId}
+        animationType="slide"
+        onRequestClose={() => {
+          setThreadModalChatId(null);
+          setReplyingToReplyId(null);
+        }}
+        presentationStyle="pageSheet"
+      >
         {MemoThreadModal}
       </Modal>
 
       <ReactionModal />
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 
 function getSafeUserId(userId: string): string {
   return userId.replace(/[.#$\[\]]/g, '_');
 }
+
 const styles = StyleSheet.create({
-  container: { flex: 1,backgroundColor: "#FFF",},
+  container: { flex: 1, backgroundColor: "#FFF" },
   headerContainer: {
     marginTop: 10,
     flexDirection: 'row',
@@ -569,16 +585,16 @@ const styles = StyleSheet.create({
   reactionButton: { flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', borderWidth: 1, borderColor: '#ccc', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 20 },
   replyCountButton: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: '#ccc', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 20, marginLeft: 8 },
   countText: { marginLeft: 6, fontSize: 14, color: '#555' },
-  inputContainer: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingVertical: 8, borderTopWidth: 1, borderTopColor: '#ccc', backgroundColor: '#fff' },
-  input: { flex: 1, borderWidth: 1, borderColor: '#ccc', borderRadius: 20, paddingHorizontal: 12, paddingVertical: 8, fontSize: 16, color: '#000' },
+  inputContainer: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingVertical: 1, borderTopWidth: 1, borderTopColor: '#ccc', backgroundColor: '#fff', flexShrink: 1 },
+  input: { flex: 1, borderWidth: 1, borderColor: '#ccc', borderRadius: 20, paddingHorizontal: 12, paddingVertical: 8, fontSize: 16, color: '#000', maxHeight: 100 },
   sendButton: { backgroundColor: '#1E90FF', padding: 10, borderRadius: 20, marginLeft: 8 },
   threadModalContainer: { flex: 1, backgroundColor: '#fff' },
   threadHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16, borderBottomWidth: 1, borderBottomColor: '#eee', backgroundColor: '#fff' },
   backButton: { padding: 4 },
   threadHeaderText: { fontSize: 18, fontWeight: 'bold', color: '#1E90FF' },
   threadModal: { flex: 1, padding: 16 },
-  replyInputContainer: { flexDirection: 'row', padding: 10, borderTopWidth: 1, borderColor: '#ccc', backgroundColor: '#fff' },
-  replyInput: { flex: 1, borderWidth: 1, borderColor: '#ccc', borderRadius: 20, paddingHorizontal: 12, paddingVertical: 8, fontSize: 16, color: '#000' },
+  replyInputContainer: { flexDirection: 'row', padding: 10, borderTopWidth: 1, borderColor: '#ccc', backgroundColor: '#fff', flexShrink: 1 },
+  replyInput: { flex: 1, borderWidth: 1, borderColor: '#ccc', borderRadius: 20, paddingHorizontal: 12, paddingVertical: 1, fontSize: 16, color: '#000', maxHeight: 100 },
   replySendButton: { backgroundColor: '#1E90FF', paddingHorizontal: 15, paddingVertical: 10, borderRadius: 20, marginLeft: 8, justifyContent: 'center', alignItems: 'center' },
   replySendButtonText: { color: '#fff', fontWeight: 'bold' },
   replyCard: { backgroundColor: '#E6F2FF', borderRadius: 10, padding: 10, marginBottom: 10 },
