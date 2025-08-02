@@ -1,10 +1,10 @@
 import { Ionicons } from "@expo/vector-icons";
+import { Picker } from "@react-native-picker/picker";
 import { onValue, push, ref, remove, update } from "firebase/database";
 import React, { useEffect, useState } from "react";
 import { Alert, FlatList, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import DateTimePickerModal from "react-native-modal-datetime-picker";
 import { db } from "../../config/firebaseConfig";
-import { Picker } from "@react-native-picker/picker";
 interface Schedule {
   id: string;
   location: string;
@@ -301,7 +301,7 @@ const styles = StyleSheet.create({
     color: "#333",
     backgroundColor: "transparent",
   },
-  inputContainer: { marginTop: 20 },
+  inputContainer: { marginTop: 20, flex: 1 },
   input: {
     borderWidth: 1,
     borderColor: "#DDD",
@@ -348,7 +348,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
   scheduleText: { fontSize: 16, flex: 1, color: "#333" },
-  scheduleList: { marginBottom: 40 },
+  scheduleList: { flexGrow: 1, },
   blueLine: {
     height: 1,
     backgroundColor: "#1E90FF",
