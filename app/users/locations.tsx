@@ -250,6 +250,8 @@ header: {
   alignItems: "center",
   paddingVertical: 12,
   paddingHorizontal: 15, 
+  flex: 1,
+  marginTop: 9,
 },
   appName: {
     fontSize: 24,
@@ -270,7 +272,7 @@ header: {
   },
   content: {
     flex: 1,
-    paddingTop: Platform.OS === "ios" ? 120 : 100, // space below fixed header
+    paddingTop: Platform.OS === "ios" ? 90 : 100, // space below fixed header
     paddingHorizontal: 15,
   },
   subHeader: {

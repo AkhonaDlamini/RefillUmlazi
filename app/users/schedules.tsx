@@ -280,7 +280,7 @@ export default function DashboardScreen() {
 
                     <Text style={[styles.outageLabel, { color: isDark ? "#aaa" : "#333" }]}>Reason:</Text>
                     <Text style={[styles.outageText, { color: isDark ? "#ccc" : "#666" }]}>
-                      {sch.reason || "N/A"}
+                      {sch.reason || "Not Specified"}
                     </Text>
                   </View>
                 ))}
@@ -311,13 +311,13 @@ const styles = StyleSheet.create({
     borderBottomColor: "#1E90FF",
   },
   header: {
-    fontSize: 24,
-    fontWeight: "bold",
-    color: "#1E90FF",
-    flex: 1,
-    textAlign: "center",
-    marginTop: 15,
-  },
+      fontSize: 24,
+      fontWeight: "bold",
+      color: "#1E90FF",
+      flex: 1,
+      textAlign: "center",
+      marginTop: 10,
+    },
   helpButton: {
     flexDirection: "row",
     alignItems: "center",
