@@ -137,72 +137,71 @@ export default function DashboardScreen() {
       <View style={styles.headerContainer}>
         <Text style={styles.header}>Refill Umlazi</Text>
         <TouchableOpacity style={styles.helpButton} onPress={handleOpenProfileModal}>
-          <Ionicons name="person-circle-outline" size={30} color="#1E90FF" />
+          <Ionicons name="person-circle-outline" size={35} color="#1E90FF" style={{ marginTop: 8 }}/>
         </TouchableOpacity>
       </View>
 
-      <Modal
-        visible={profileModalVisible}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setProfileModalVisible(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { backgroundColor: isDark ? "#222" : "#fff" }]}>
-            <Text style={[styles.modalTitle, { color: "#1E90FF" }]}>Profile</Text>
-            <View style={styles.profileInfo}>
-              <Text style={[styles.label, { color: isDark ? "#fff" : "#333" }]}>Email</Text>
-              <Text style={[styles.value, { color: isDark ? "#ccc" : "#666" }]}>
-                {auth.currentUser?.email || "N/A"}
-              </Text>
+     <Modal
+  visible={profileModalVisible}
+  transparent
+  animationType="slide"
+  onRequestClose={() => setProfileModalVisible(false)}
+>
+  <View style={styles.modalOverlay}>
+    <View style={[styles.modalContent, { backgroundColor: isDark ? "#1e1e1e" : "#FFF" }]}>
+      <Text style={[styles.modalTitle, { color: isDark ? "#FFF" : "#1E90FF" }]}>Profile</Text>
 
-              <Text style={[styles.label, { color: isDark ? "#fff" : "#333" }]}>Display Name</Text>
-              <TextInput
-                value={editingName}
-                onChangeText={setEditingName}
-                style={[
-                  styles.input,
-                  {
-                    color: isDark ? "#fff" : "#000",
-                    borderColor: isDark ? "#444" : "#ccc",
-                    backgroundColor: isDark ? "#181818" : "#fff",
-                  },
-                ]}
-                placeholder="Enter display name"
-                placeholderTextColor={isDark ? "#aaa" : "#888"}
-              />
+      <View style={styles.profileInfo}>
+        <Text style={[styles.label, { color: isDark ? "#bbb" : "#444" }]}>Email</Text>
+        <Text style={[styles.value, { color: isDark ? "#ccc" : "#666" }]}>
+          {auth.currentUser?.email || "N/A"}
+        </Text>
 
-              <Text style={[styles.label, { color: isDark ? "#fff" : "#333" }]}>Selected Location</Text>
-              <Text style={[styles.value, { color: isDark ? "#ccc" : "#666" }]}>
-                {selectedLocation || "None"}
-              </Text>
+        <Text style={[styles.label, { color: isDark ? "#bbb" : "#444" }]}>Display Name</Text>
+        <TextInput
+          value={editingName}
+          onChangeText={setEditingName}
+          style={[
+            styles.input,
+            {
+              backgroundColor: isDark ? "#2b2b2b" : "#F2F4F6",
+              color: isDark ? "#fff" : "#000",
+              borderColor: isDark ? "#444" : "#ccc",
+            },
+          ]}
+          placeholder="Enter your name"
+          placeholderTextColor={isDark ? "#888" : "#aaa"}
+        />
 
-              {/* Dark Mode Toggle */}
-              <View style={styles.option}>
-                <Text style={[styles.label, { color: isDark ? "#fff" : "#000" }]}>Dark Mode</Text>
-                <Switch value={isDark} onValueChange={toggleTheme} />
-              </View>
-            </View>
+        <Text style={[styles.label, { color: isDark ? "#bbb" : "#444" }]}>Selected Location</Text>
+        <Text style={[styles.value, { color: isDark ? "#ccc" : "#666" }]}>
+          {selectedLocation || "None"}
+        </Text>
 
-            <TouchableOpacity
-              style={[styles.button, styles.saveButton]}
-              onPress={handleSaveName}
-              disabled={saving}
-            >
-              <Text style={styles.buttonText}>{saving ? "Saving..." : "Save Name"}</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={[styles.button, styles.logoutButton]} onPress={handleLogout}>
-              <Text style={styles.buttonText}>Logout</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.cancelButton}
-              onPress={() => setProfileModalVisible(false)}
-            >
-              <Text style={styles.cancelText}>Cancel</Text>
-            </TouchableOpacity>
-          </View>
+        <View style={styles.option}>
+          <Text style={[styles.label, { color: isDark ? "#fff" : "#000" }]}>Dark Mode</Text>
+          <Switch value={isDark} onValueChange={toggleTheme} />
         </View>
-      </Modal>
+      </View>
+
+      <TouchableOpacity
+        style={[styles.button, styles.saveButton]}
+        onPress={handleSaveName}
+        disabled={saving}
+      >
+        <Text style={styles.buttonText}>{saving ? "Saving..." : "Save Changes"}</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity style={[styles.button, styles.logoutButton]} onPress={handleLogout}>
+        <Text style={styles.buttonText}>Logout</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity style={styles.cancelButton} onPress={() => setProfileModalVisible(false)}>
+        <Text style={styles.cancelText}>Close</Text>
+      </TouchableOpacity>
+    </View>
+  </View>
+</Modal>
 
       <Text style={[styles.subText, { color: isDark ? "#ccc" : "#333" }]}>
         {selectedLocation ? `Showing schedules for: ${selectedLocation}` : "No location selected."}
@@ -239,7 +238,7 @@ export default function DashboardScreen() {
                     key={sch.id}
                     style={[
                       styles.outageCard,
-                      { backgroundColor: isDark ? "#1e1e1e" : "#F9FAFB" },
+                      { backgroundColor: isDark ? "#1e1e1e" : "#fff" },
                     ]}
                   >
                     <View style={styles.cardHeaderRow}>
@@ -272,7 +271,7 @@ export default function DashboardScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#FFF" },
+  container: { flex: 1, backgroundColor: "#F9FAFB" },
   headerContainer: {
     marginTop: 10,
     flexDirection: "row",
@@ -301,92 +300,92 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: "#333",
     marginTop: 10,
-    marginBottom: 5,
+    //marginBottom: 5,
     textAlign: "center",
   },
   emptyText: {
     fontSize: 16,
     color: "gray",
     textAlign: "center",
-    marginTop: 30,
+    //marginTop: 30,
   },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.3)",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  modalContent: {
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    padding: 24,
-    width: "85%",
-    alignItems: "center",
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: "bold",
-    color: "#1E90FF",
-    marginBottom: 16,
-  },
-  profileInfo: {
-    width: "100%",
-    marginBottom: 16,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: "bold",
-    color: "#333",
-    marginTop: 8,
-  },
-  value: {
-    fontSize: 14,
-    color: "#666",
-    marginBottom: 8,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: "#ccc",
-    borderRadius: 8,
-    padding: 8,
-    width: "100%",
-    marginBottom: 8,
-    color: "#000",
-  },
-  option: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginTop: 10,
-  },
-  button: {
-    borderRadius: 8,
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    marginBottom: 10,
-    width: "100%",
-    alignItems: "center",
-  },
-  saveButton: {
-    backgroundColor: "#1E90FF",
-  },
-  logoutButton: {
-    backgroundColor: "#ff4444",
-  },
-  buttonText: {
-    color: "#fff",
-    fontWeight: "bold",
-    fontSize: 16,
-  },
-  cancelButton: {
-    marginTop: 8,
-  },
-  cancelText: {
-    color: "#1E90FF",
-    fontSize: 14,
-  },
+ modalOverlay: {
+  flex: 1,
+  backgroundColor: "rgba(0,0,0,0.5)",
+  justifyContent: "center",
+  alignItems: "center",
+},
+modalContent: {
+  borderRadius: 16,
+  padding: 24,
+  width: "90%",
+  shadowColor: "#000",
+  shadowOpacity: 0.25,
+  shadowRadius: 10,
+  elevation: 10,
+},
+modalTitle: {
+  fontSize: 22,
+  fontWeight: "bold",
+  //marginBottom: 20,
+  textAlign: "center",
+},
+profileInfo: {
+  width: "100%",
+  gap: 12,
+  //marginBottom: 20,
+},
+label: {
+  fontSize: 14,
+  fontWeight: "600",
+  //marginBottom: 4,
+},
+value: {
+  fontSize: 14,
+  //marginBottom: 2,
+},
+input: {
+  borderWidth: 1,
+  borderRadius: 10,
+  paddingVertical: 10,
+  paddingHorizontal: 14,
+  fontSize: 14,
+},
+option: {
+  flexDirection: "row",
+  justifyContent: "space-between",
+  alignItems: "center",
+  //marginTop: 16,
+},
+button: {
+  borderRadius: 10,
+  paddingVertical: 12,
+  alignItems: "center",
+  width: "100%",
+  marginTop: 10,
+},
+saveButton: {
+  backgroundColor: "#1E90FF",
+},
+logoutButton: {
+  backgroundColor: "#FF4D4F",
+},
+buttonText: {
+  color: "#fff",
+  fontSize: 16,
+  fontWeight: "bold",
+},
+cancelButton: {
+  marginTop: 8,
+},
+cancelText: {
+  color: "#1E90FF",
+  fontSize: 14,
+  fontWeight: "600",
+  textAlign: "center",
+},
   outageCard: {
-    backgroundColor: "#F9FAFB",
+    backgroundColor: "#FFFFFF",
     padding: 15,
     borderRadius: 12,
     marginBottom: 12,

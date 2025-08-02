@@ -115,16 +115,21 @@ export default function AnnouncementsScreen() {
       fontWeight: "500",
     },
     card: {
-      backgroundColor: isDark ? "#1E1E1E" : "#F9F9F9",
-      marginVertical: 8,
-      borderRadius: 12,
-      shadowColor: "#000",
-      shadowOffset: { width: 0, height: 3 },
-      shadowOpacity: 0.15,
-      shadowRadius: 6,
-      elevation: 4,
-      padding: 12,
-    },
+  backgroundColor: isDark ? "#1E1E1E" : "#F9F9F9",
+  marginTop: 15,
+  marginVertical: 8, // only vertical margin
+  borderRadius: 12,
+  shadowColor: "#000",
+  shadowOffset: { width: 0, height: 3 },
+  shadowOpacity: 0.15,
+  shadowRadius: 6,
+  elevation: 4,
+  padding: 12,
+},
+    listContainer: {
+  paddingHorizontal: 16,
+  paddingBottom: 16,
+},
     unreadCard: {
       borderWidth: 1,
       borderColor: "#1E90FF",
@@ -171,41 +176,41 @@ export default function AnnouncementsScreen() {
       </View>
       {auth.currentUser ? (
         <FlatList
-          data={filteredAnnouncements}
-          keyExtractor={(item) => item.id}
-          renderItem={({ item }) => {
-            const isRead = readIds.includes(item.id);
-            return (
-              <TouchableOpacity
-                onPress={() => markAsRead(item.id)}
-                activeOpacity={0.8}
-                style={[styles.card, !isRead && styles.unreadCard]}
-              >
-                <View style={{ flexDirection: "row", alignItems: "center" }}>
-                  {!isRead && (
-                    <View style={styles.newBadge}>
-                      <Text style={styles.newBadgeText}>NEW</Text>
-                    </View>
-                  )}
-                  <Text
-                    style={[
-                      styles.cardText,
-                      { flexShrink: 1, marginLeft: isRead ? 0 : 12 },
-                    ]}
-                  >
-                    📣 {item.text}
-                  </Text>
-                </View>
-                <Text style={styles.timestamp}>
-                  {formatTimestamp(item.timestamp)}
-                </Text>
-              </TouchableOpacity>
-            );
-          }}
-          ListEmptyComponent={
-            <Text style={styles.emptyText}>No announcements yet.</Text>
-          }
-        />
+  data={filteredAnnouncements}
+  keyExtractor={(item) => item.id}
+  contentContainerStyle={styles.listContainer} // <- Add this line
+  renderItem={({ item }) => {
+    const isRead = readIds.includes(item.id);
+    return (
+      <TouchableOpacity
+        onPress={() => markAsRead(item.id)}
+        activeOpacity={0.8}
+        style={[styles.card, !isRead && styles.unreadCard]}
+      >
+        <View style={{ flexDirection: "row", alignItems: "center" }}>
+          {!isRead && (
+            <View style={styles.newBadge}>
+              <Text style={styles.newBadgeText}>NEW</Text>
+            </View>
+          )}
+          <Text
+            style={[
+              styles.cardText,
+              { flexShrink: 1, marginLeft: isRead ? 0 : 12 },
+            ]}
+          >
+            📣 {item.text}
+          </Text>
+        </View>
+        <Text style={styles.timestamp}>{formatTimestamp(item.timestamp)}</Text>
+      </TouchableOpacity>
+    );
+  }}
+  ListEmptyComponent={
+    <Text style={styles.emptyText}>No announcements yet.</Text>
+  }
+/>
+
       ) : (
         <Text style={styles.emptyText}>Loading...</Text>
       )}

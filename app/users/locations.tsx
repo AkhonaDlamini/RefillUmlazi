@@ -110,7 +110,7 @@ export default function Locations() {
               color: isDark ? "#fff" : "#222",
               borderColor: isDark ? "#444" : "#DDD"
             }]}
-            placeholder="Type to search locations..."
+            placeholder="Search for locations..."
             placeholderTextColor={isDark ? "#aaa" : "#888"}
             value={inputText}
             onChangeText={setInputText}
@@ -145,7 +145,7 @@ export default function Locations() {
             <Text style={styles.addButtonText}>Add Location</Text>
           </TouchableOpacity>
         </View>
-        <Text style={styles.subHeader}>My Areas</Text>
+        <Text style={styles.subHeader}>Saved Locations</Text>
 
         <FlatList
           data={locations}
@@ -154,25 +154,23 @@ export default function Locations() {
             <Text style={[styles.emptyText, { color: isDark ? "#aaa" : "gray" }]}>No locations added yet.</Text>
           }
           renderItem={({ item }) => (
-            <TouchableOpacity
-              onPress={() => handleLocationPress(item)}
-              activeOpacity={0.7}
-              style={[
-            styles.locationItem,
-            { backgroundColor: isDark ? "#23272b" : "#f9f9f9", borderColor: isDark ? "#444" : "#ddd" }
-          ]}
-            >
-              <Ionicons name="location-outline" size={24} color="#1E90FF" style={{ marginRight: 8 }} />
-              <Text style={[styles.locationText, { color: isDark ? "#fff" : "#333" }]}>{item}</Text>
-              <TouchableOpacity onPress={() => removeLocation(item)} style={{ padding: 4 }}>
-                <MaterialCommunityIcons
-  name="delete-sweep-outline"
-  size={28}
-  color={isDark ? "#fff" : "#000"} // dynamic color based on theme
-/>
+           <TouchableOpacity
+  onPress={() => handleLocationPress(item)}
+  activeOpacity={0.7}
+  style={[
+    styles.locationItem,
+    { backgroundColor: isDark ? "#23272b" : "#f9f9f9", borderColor: isDark ? "#444" : "#ddd" }
+  ]}
+>
+  <View style={styles.iconDot}>
+    <Ionicons name="location-outline" size={16} color="#fff" />
+  </View>
+  <Text style={[styles.locationText, { color: isDark ? "#fff" : "#333" }]}>{item}</Text>
+  <TouchableOpacity onPress={() => removeLocation(item)} style={styles.trashIcon}>
+    <Ionicons name="trash-outline" size={20} color="#fff" />
+  </TouchableOpacity>
+</TouchableOpacity>
 
-              </TouchableOpacity>
-            </TouchableOpacity>
           )}
         />
       </View>
@@ -259,15 +257,15 @@ header: {
   },
   searchInput: {
     width: "100%",
-    height: 44,
+    height: 50,
     borderWidth: 1,
     borderColor: "#DDD",
-    borderRadius: 8,
-    paddingHorizontal: 12,
+    borderRadius: 12,
+    paddingHorizontal: 14,
     fontSize: 16,
     backgroundColor: "#F8FAFF",
     color: "#222",
-    marginBottom: 8,
+    marginBottom: 10,
   },
   searchInputFocused: {
     borderColor: "#1E90FF",
@@ -327,12 +325,17 @@ header: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    backgroundColor: "#f9f9f9",
-    borderWidth: 1,
-    borderColor: "#ddd",
-    borderRadius: 6,
-    padding: 12,
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    padding: 14,
     marginBottom: 12,
+    borderWidth: 1,
+    borderColor: "#eee",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
   },
   locationText: {
     fontSize: 16,
@@ -377,4 +380,18 @@ header: {
     fontSize: 16,
     textAlign: "center",
   },
+  iconDot: {
+  backgroundColor: "#1E90FF",
+  width: 38,
+  height: 38,
+  borderRadius: 20,
+  justifyContent: "center",
+  alignItems: "center",
+  marginRight: 10,
+},
+trashIcon: {
+  backgroundColor: "#FF5C5C",
+  padding: 8,
+  borderRadius: 20,
+},
 });
