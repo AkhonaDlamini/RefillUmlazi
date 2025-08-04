@@ -34,7 +34,6 @@ export default function RefillStationScreen() {
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [helpVisible, setHelpVisible] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const { isDark } = useContext(ThemeContext);
   const mapRef = useRef<MapView>(null);
 
@@ -59,14 +58,11 @@ export default function RefillStationScreen() {
           }
         },
         (err) => {
-          console.error(err);
-          setError("Could not load refill stations. Please try again later.");
           Alert.alert("Error", "Could not load refill stations. Please try again later.");
         }
       );
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (e) {
-      console.error(e);
-      setError("Could not load refill stations. Please try again later.");
       Alert.alert("Error", "Could not load refill stations. Please try again later.");
     }
   }, []);
