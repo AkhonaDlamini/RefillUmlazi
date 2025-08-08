@@ -284,7 +284,7 @@ export default function UserChat() {
   const getDisplayName = React.useCallback(
     (userId?: string | null, displayName?: string) => {
       if (displayName?.trim()) return displayName.trim();
-      if (!userId) return 'anonymous';
+      if (!userId) return 'Admin';
       if (users[userId]?.displayName?.trim()) return users[userId].displayName.trim();
       return userId;
     },
