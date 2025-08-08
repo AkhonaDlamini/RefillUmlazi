@@ -147,8 +147,8 @@ export default function RefillStationScreen() {
     } else {
       Alert.alert('No Map App', 'Could not open map. Please check your device.');
     }
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   } catch (error) {
-    console.error('Navigation error:', error);
     Alert.alert('Error', 'Failed to open directions.');
   }
 };
