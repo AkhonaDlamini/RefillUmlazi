@@ -80,7 +80,7 @@ export default function UserChat() {
     if (!message.trim() || !auth.currentUser) return;
     await push(ref(db, 'chats'), {
       userId: auth.currentUser.uid,
-      displayName: auth.currentUser.displayName || 'anonymous',
+      displayName: auth.currentUser.displayName || 'Admin',
       message,
       timestamp: new Date().toISOString(),
     });
