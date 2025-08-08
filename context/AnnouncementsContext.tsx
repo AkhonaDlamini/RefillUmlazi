@@ -21,8 +21,16 @@ const AnnouncementsContext = createContext<AnnouncementsContextType | undefined>
 export const AnnouncementsProvider = ({ children }: { children: ReactNode }) => {
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [readIds, setReadIds] = useState<string[]>([]);
+  const [userCreationTime, setUserCreationTime] = useState<Date | null>(null);
   const auth = getAuth();
   const uid = auth.currentUser?.uid;
+
+  // Get user creation time
+  useEffect(() => {
+    if (auth.currentUser?.metadata.creationTime) {
+      setUserCreationTime(new Date(auth.currentUser.metadata.creationTime));
+    }
+  }, [auth.currentUser]);
 
   // Fetch announcements
   useEffect(() => {
@@ -43,10 +51,10 @@ export const AnnouncementsProvider = ({ children }: { children: ReactNode }) => 
     return () => unsubscribe();
   }, []);
 
-  // Fetch read announcement IDs for authenticated user
+  // Fetch read announcement IDs
   useEffect(() => {
     if (!uid) {
-      setReadIds([]); // Clear readIds if no user is logged in
+      setReadIds([]);
       return;
     }
 
@@ -64,15 +72,22 @@ export const AnnouncementsProvider = ({ children }: { children: ReactNode }) => 
   }, [uid]);
 
   const markAsRead = (id: string) => {
-    if (!uid || readIds.includes(id)) return; // Skip if not logged in or already read
+    if (!uid || readIds.includes(id)) return;
     set(ref(db, `users/${uid}/readAnnouncements/${id}`), true);
-    setReadIds((prev) => [...prev, id]); // Optimistic update
+    setReadIds((prev) => [...prev, id]);
   };
 
-  const unreadCount = announcements.filter((a) => !readIds.includes(a.id)).length;
+  // Filter announcements to only those made after user creation time
+  const filteredAnnouncements = announcements.filter((a) => {
+    if (!userCreationTime || !a.timestamp) return false; // block until loaded
+    const announcementTime = new Date(a.timestamp);
+    return announcementTime >= userCreationTime;
+  });
+
+  const unreadCount = filteredAnnouncements.filter((a) => !readIds.includes(a.id)).length;
 
   return (
-    <AnnouncementsContext.Provider value={{ announcements, readIds, markAsRead, unreadCount }}>
+    <AnnouncementsContext.Provider value={{ announcements: filteredAnnouncements, readIds, markAsRead, unreadCount }}>
       {children}
     </AnnouncementsContext.Provider>
   );
