@@ -56,7 +56,8 @@ export default function AnnouncementsScreen() {
   };
 
   const filteredAnnouncements = announcements.filter((item) => {
-    if (!userCreationTime || !item.timestamp) return true;
+    if (!userCreationTime) return false;
+    if(!item.timestamp) return false;
     const announcementTime = new Date(item.timestamp);
     return announcementTime >= userCreationTime;
   });
@@ -192,8 +193,8 @@ export default function AnnouncementsScreen() {
       <View style={styles.headerContainer}>
         <Text style={styles.header}>Announcements</Text>
       </View>
-      {error ? (
-        <Text style={styles.emptyText}>{error}</Text>
+      {!userCreationTime ? (
+        <Text style={styles.emptyText}>No announcements made yet.</Text>
       ) : auth.currentUser ? (
         <FlatList
           data={filteredAnnouncements}
