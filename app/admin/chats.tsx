@@ -164,7 +164,7 @@ export default function UserChat() {
     type: 'chat' | 'reply',
     replyPathArr?: string[]
   ) => {
-    const userId = getSafeUserId(auth.currentUser?.uid || 'anonymous');
+    const userId = getSafeUserId(auth.currentUser?.uid || 'Admin');
     try {
       if (type === 'chat') {
         const chat = chats.find(c => c.id === chatId);

@@ -146,20 +146,28 @@ export default function Locations() {
             onFocus={() => setIsFocused(true)}
             onBlur={() => setTimeout(() => setIsFocused(false), 200)}
           />
-          {isFocused && inputText && filteredLocations.length > 0 && (
-            <View style={[
-            styles.suggestionsContainer,
-            { backgroundColor: isDark ? "#23272b" : "#FFF", borderColor: isDark ? "#444" : "#DDD" }
-          ]}>
-              <FlatList
-                data={filteredLocations}
-                keyExtractor={(item) => item}
-                renderItem={renderSuggestion}
-                style={styles.suggestionsList}
-                keyboardShouldPersistTaps="handled"
-              />
-            </View>
-          )}
+          {isFocused && inputText && (
+  <View
+    style={[
+      styles.suggestionsContainer,
+      { backgroundColor: isDark ? "#23272b" : "#FFF", borderColor: isDark ? "#444" : "#DDD" }
+    ]}
+  >
+    <FlatList
+      data={filteredLocations}
+      keyExtractor={(item) => item}
+      renderItem={renderSuggestion}
+      ListEmptyComponent={
+        <Text style={[styles.noResultsText, { color: isDark ? "#aaa" : "#666" }]}>
+          No refill stations found for "{inputText}"
+        </Text>
+      }
+      style={styles.suggestionsList}
+      keyboardShouldPersistTaps="handled"
+    />
+  </View>
+)}
+
           <TouchableOpacity
             style={[
               styles.addButton,
@@ -424,5 +432,11 @@ trashIcon: {
   backgroundColor: "#FF5C5C",
   padding: 8,
   borderRadius: 20,
+},
+noResultsText: {
+  textAlign: "center",
+  paddingVertical: 12,
+  fontSize: 14,
+  fontStyle: "italic"
 },
 });
